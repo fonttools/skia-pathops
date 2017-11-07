@@ -98,7 +98,7 @@ class custom_build_ext(build_ext):
             else:
                 extra_link_args = ext.extra_link_args.get("", [])
         else:
-            extra_link_args = ext.extra_compile_args or []
+            extra_link_args = ext.extra_link_args or []
 
         if isinstance(ext.define_macros, dict):
             if compiler_type in ext.define_macros:
