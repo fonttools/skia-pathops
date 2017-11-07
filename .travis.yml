@@ -3,7 +3,7 @@ env:
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _build_ project
-    - BUILD_DEPENDS="Cython"
+    - BUILD_DEPENDS="setuptools>=36.6 Cython"
     # pip dependencies to _test_ project
     - TEST_DEPENDS="tox"
     - PLAT=x86_64
