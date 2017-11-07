@@ -1,4 +1,4 @@
 [submodule "skia"]
-	path = skia
+	path = src/cpp/skia
 	url = https://skia.googlesource.com/skia.git
 	ignore = dirty
