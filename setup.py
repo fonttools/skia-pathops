@@ -83,9 +83,21 @@ skia_src = [
     os.path.join(skia_dir, "src", "pathops", "SkReduceOrder.cpp"),
     os.path.join(skia_dir, "src", "ports", "SkDebug_stdio.cpp"),
     os.path.join(skia_dir, "src", "ports", "SkMemory_malloc.cpp"),
-    os.path.join(skia_dir, "src", "ports", "SkOSFile_posix.cpp"),
     os.path.join(skia_dir, "src", "ports", "SkOSFile_stdio.cpp"),
 ]
+
+if os.name == "nt":
+    skia_src += [
+        os.path.join(skia_dir, "src", "ports", "SkDebug_win.cpp"),
+        os.path.join(skia_dir, "src", "ports", "SkOSFile_win.cpp"),
+    ]
+elif os.name == "posix":
+    skia_src += [
+        os.path.join(skia_dir, "src", "ports", "SkOSFile_posix.cpp"),
+    ]
+
+else:
+    raise RuntimeError("unsupported OS: %r" % os.name)
 
 include_dirs = [
     os.path.join(skia_dir, 'include', 'config'),
