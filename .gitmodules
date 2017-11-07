@@ -2,3 +2,6 @@
 	path = src/cpp/skia
 	url = https://skia.googlesource.com/skia.git
 	ignore = dirty
+[submodule "multibuild"]
+	path = multibuild
+	url = https://github.com/matthew-brett/multibuild/
