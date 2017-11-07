@@ -4,6 +4,7 @@ from setuptools import setup, find_packages, Extension
 import os
 import pkg_resources
 import sys
+import platform
 
 
 needs_pytest = {'pytest', 'test'}.intersection(sys.argv)
@@ -96,11 +97,18 @@ include_dirs = [
     os.path.join(skia_dir, 'src', 'shaders'),
 ]
 
+extra_compile_args = [
+    '-std=c++0x',
+    # extra flags needed on macOS for C++11
+] + (["-stdlib=libc++", "-mmacosx-version-min=10.7"]
+     if platform.system() == "Darwin" else [])
+
 libraries = [
     (
         'skia', {
             'sources': skia_src,
             'include_dirs': include_dirs,
+            'cflags': extra_compile_args,
         },
     ),
 ]
@@ -115,6 +123,7 @@ extensions = [
             os.path.join(skia_dir, 'include', 'core', 'SkPath.h'),
         ],
         include_dirs=include_dirs,
+        extra_compile_args=extra_compile_args,
         language="c++",
     ),
     Extension(
@@ -126,6 +135,7 @@ extensions = [
             os.path.join(skia_dir, 'include', 'pathops', 'SkPathOps.h'),
         ],
         include_dirs=include_dirs,
+        extra_compile_args=extra_compile_args,
         language="c++",
     ),
 ]
