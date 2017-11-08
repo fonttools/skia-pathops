@@ -50,9 +50,10 @@ class custom_build_ext(build_ext):
 
             # optionally enable line tracing for test coverage support
             linetrace = os.environ.get("CYTHON_TRACE") == "1"
+            force = linetrace or self.force
             self.distribution.ext_modules[:] = cythonize(
                 self.distribution.ext_modules,
-                force=self.force,
+                force=force,
                 quiet=not self.verbose,
                 compiler_directives={
                     "linetrace": linetrace,
