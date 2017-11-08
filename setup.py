@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from setuptools import setup, find_packages, Extension
-import os
+from distutils.command.build_clib import build_clib
+from distutils.errors import DistutilsSetupError
+from distutils import log
+from distutils.dep_util import newer_group, newer_pairwise
 import pkg_resources
 import sys
+import os
 import platform
 
 
@@ -25,6 +29,202 @@ else:
     with_cython = True
     print('Development mode: Compiling Cython modules from .pyx sources.')
     from Cython.Distutils.build_ext import new_build_ext as build_ext
+
+
+class custom_build_ext(build_ext):
+    """ Custom 'build_ext' command which allows to pass compiler-specific
+    'extra_compile_args', 'extra_link_args', 'define_macros' and
+    'undef_macros' options.
+
+    The value of the Extension class keywords can be provided as a dict,
+    with the the compiler type as the keys (e.g. "unix", "mingw32", "msvc"),
+    and the values containing the compiler-specific list of options.
+    A special empty string '' key may be used for default options that
+    apply to all the other compiler types except for those explicitly
+    listed.
+    """
+
+    def finalize_options(self):
+        build_ext.finalize_options(self)
+        if self.compiler is None:
+            # we use this variable with tox to build using GCC on Windows.
+            # https://bitbucket.org/hpk42/tox/issues/274/specify-compiler
+            self.compiler = os.environ.get("DISTUTILS_COMPILER", None)
+        if self.compiler == "mingw32":
+            # workaround for virtualenv changing order of libary_dirs on
+            # Windows, which makes gcc fail to link with the correct libpython
+            # https://github.com/mingwpy/mingwpy.github.io/issues/31
+            self.library_dirs.insert(0, os.path.join(sys.exec_prefix, 'libs'))
+
+    def build_extension(self, ext):
+        sources = ext.sources
+        if sources is None or not isinstance(sources, (list, tuple)):
+            raise DistutilsSetupError(
+                "in 'ext_modules' option (extension '%s'), "
+                "'sources' must be present and must be "
+                "a list of source filenames" % ext.name)
+        sources = list(sources)
+
+        ext_path = self.get_ext_fullpath(ext.name)
+        depends = sources + ext.depends
+        if not (self.force or newer_group(depends, ext_path, 'newer')):
+            log.debug("skipping '%s' extension (up-to-date)", ext.name)
+            return
+        else:
+            log.info("building '%s' extension", ext.name)
+
+        # Detect target language, if not provided
+        language = ext.language or self.compiler.detect_language(sources)
+
+        # do compiler specific customizations
+        compiler_type = self.compiler.compiler_type
+
+        # strip compile flags that are not valid for C++ to avoid warnings
+        if compiler_type == "unix" and language == "c++":
+            if "-Wstrict-prototypes" in self.compiler.compiler_so:
+                self.compiler.compiler_so.remove("-Wstrict-prototypes")
+
+        if isinstance(ext.extra_compile_args, dict):
+            if compiler_type in ext.extra_compile_args:
+                extra_compile_args = ext.extra_compile_args[compiler_type]
+            else:
+                extra_compile_args = ext.extra_compile_args.get("", [])
+        else:
+            extra_compile_args = ext.extra_compile_args or []
+
+        if isinstance(ext.extra_link_args, dict):
+            if compiler_type in ext.extra_link_args:
+                extra_link_args = ext.extra_link_args[compiler_type]
+            else:
+                extra_link_args = ext.extra_link_args.get("", [])
+        else:
+            extra_link_args = ext.extra_compile_args or []
+
+        if isinstance(ext.define_macros, dict):
+            if compiler_type in ext.define_macros:
+                macros = ext.define_macros[compiler_type]
+            else:
+                macros = ext.define_macros.get("", [])
+        else:
+            macros = ext.define_macros or []
+
+        if isinstance(ext.undef_macros, dict):
+            for tp, undef in ext.undef_macros.items():
+                if tp == compiler_type:
+                    macros.append((undef,))
+        else:
+            for undef in ext.undef_macros:
+                macros.append((undef,))
+
+        # compile the source code to object files.
+        objects = self.compiler.compile(sources,
+                                        output_dir=self.build_temp,
+                                        macros=macros,
+                                        include_dirs=ext.include_dirs,
+                                        debug=self.debug,
+                                        extra_postargs=extra_compile_args,
+                                        depends=ext.depends)
+
+        # Now link the object files together into a "shared object"
+        if ext.extra_objects:
+            objects.extend(ext.extra_objects)
+
+        self.compiler.link_shared_object(
+            objects, ext_path,
+            libraries=self.get_libraries(ext),
+            library_dirs=ext.library_dirs,
+            runtime_library_dirs=ext.runtime_library_dirs,
+            extra_postargs=extra_link_args,
+            export_symbols=self.get_export_symbols(ext),
+            debug=self.debug,
+            build_temp=self.build_temp,
+            target_lang=language)
+
+
+class custom_build_clib(build_clib):
+    """ Custom build_clib command which allows to pass compiler-specific
+    'macros' and 'cflags' when compiling C libraries.
+
+    In the setup 'libraries' option, the 'macros' and 'cflags' can be
+    provided as dict with the compiler type as the key (e.g. "unix",
+    "mingw32", "msvc") and the value containing the list of macros/cflags.
+    A special empty string '' key may be used for default options that
+    apply to all the other compiler types except for those explicitly
+    listed.
+    """
+
+    def finalize_options(self):
+        build_clib.finalize_options(self)
+        if self.compiler is None:
+            # we use this variable with tox to build using GCC on Windows.
+            # https://bitbucket.org/hpk42/tox/issues/274/specify-compiler
+            self.compiler = os.environ.get("DISTUTILS_COMPILER", None)
+
+    def build_libraries(self, libraries):
+        for (lib_name, build_info) in libraries:
+            sources = build_info.get('sources')
+            if sources is None or not isinstance(sources, (list, tuple)):
+                raise DistutilsSetupError(
+                    "in 'libraries' option (library '%s'), "
+                    "'sources' must be present and must be "
+                    "a list of source filenames" % lib_name)
+            sources = list(sources)
+
+            # detect target language
+            language = self.compiler.detect_language(sources)
+
+            # do compiler specific customizations
+            compiler_type = self.compiler.compiler_type
+
+            # strip compile flags that are not valid for C++ to avoid warnings
+            if compiler_type == "unix" and language == "c++":
+                if "-Wstrict-prototypes" in self.compiler.compiler_so:
+                    self.compiler.compiler_so.remove("-Wstrict-prototypes")
+
+            # get compiler-specific preprocessor definitions
+            macros = build_info.get("macros", [])
+            if isinstance(macros, dict):
+                if compiler_type in macros:
+                    macros = macros[compiler_type]
+                else:
+                    macros = macros.get("", [])
+
+            include_dirs = build_info.get('include_dirs')
+
+            # get compiler-specific compile flags
+            cflags = build_info.get("cflags", [])
+            if isinstance(cflags, dict):
+                if compiler_type in cflags:
+                    cflags = cflags[compiler_type]
+                else:
+                    cflags = cflags.get("", [])
+
+            expected_objects = self.compiler.object_filenames(
+                sources,
+                output_dir=self.build_temp)
+
+            # TODO: also support objects' dependencies
+            if (self.force or
+                    newer_pairwise(sources, expected_objects) != ([], [])):
+                log.info("building '%s' library", lib_name)
+                # compile the source code to object files
+                objects = self.compiler.compile(sources,
+                                                output_dir=self.build_temp,
+                                                macros=macros,
+                                                include_dirs=include_dirs,
+                                                extra_postargs=cflags,
+                                                debug=self.debug)
+            else:
+                log.debug(
+                    "skipping build '%s' objects (up-to-date)" % lib_name)
+                objects = expected_objects
+
+            # Now "link" the object files together into a static library.
+            # (On Unix at least, this isn't really linking -- it just
+            # builds an archive.  Whatever.)
+            self.compiler.create_static_lib(objects, lib_name,
+                                            output_dir=self.build_clib,
+                                            debug=self.debug)
 
 
 ext = '.pyx' if with_cython else '.cpp'
@@ -95,7 +295,6 @@ elif os.name == "posix":
     skia_src += [
         os.path.join(skia_dir, "src", "ports", "SkOSFile_posix.cpp"),
     ]
-
 else:
     raise RuntimeError("unsupported OS: %r" % os.name)
 
@@ -109,11 +308,26 @@ include_dirs = [
     os.path.join(skia_dir, 'src', 'shaders'),
 ]
 
-extra_compile_args = [
-    '-std=c++0x',
-    # extra flags needed on macOS for C++11
-] + (["-stdlib=libc++", "-mmacosx-version-min=10.7"]
-     if platform.system() == "Darwin" else [])
+extra_compile_args = {
+    '': [
+        '-std=c++0x',
+    ] + ([
+        # extra flags needed on macOS for C++11
+        "-stdlib=libc++",
+        "-mmacosx-version-min=10.7",
+    ] if platform.system() == "Darwin" else []),
+    "msvc": [
+        "/EHsc",
+        "/Zi",
+    ],
+}
+
+define_macros = {
+    # On Windows Python 2.7, pyconfig.h defines "hypot" as "_hypot",
+    # This clashes with GCC's cmath, and causes compilation errors when
+    # building under MinGW: http://bugs.python.org/issue11566
+    "mingw32": [("_hypot", "hypot")],
+}
 
 libraries = [
     (
@@ -121,6 +335,7 @@ libraries = [
             'sources': skia_src,
             'include_dirs': include_dirs,
             'cflags': extra_compile_args,
+            'macros': define_macros,
         },
     ),
 ]
@@ -134,6 +349,7 @@ extensions = [
         depends=[
             os.path.join(skia_dir, 'include', 'core', 'SkPath.h'),
         ],
+        define_macros=define_macros,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         language="c++",
@@ -146,6 +362,7 @@ extensions = [
         depends=[
             os.path.join(skia_dir, 'include', 'pathops', 'SkPathOps.h'),
         ],
+        define_macros=define_macros,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         language="c++",
@@ -164,9 +381,11 @@ setup_params = dict(
     license="BSD-3-Clause",
     package_dir={"": pkg_dir},
     packages=find_packages(pkg_dir),
+    libraries=libraries,
     ext_modules=extensions,
     cmdclass={
-        'build_ext': build_ext,
+        'build_ext': custom_build_ext,
+        'build_clib': custom_build_clib,
     },
     setup_requires=pytest_runner + wheel,
     tests_require=[
@@ -187,7 +406,6 @@ setup_params = dict(
         "Topic :: Multimedia :: Graphics",
         "Topic :: Multimedia :: Graphics :: Graphics Conversion",
     ],
-    libraries=libraries,
 )
 
 if __name__ == "__main__":
