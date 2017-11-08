@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from setuptools import setup, find_packages, Extension
+from setuptools.command.build_ext import build_ext
 from distutils.command.build_clib import build_clib
 from distutils.errors import DistutilsSetupError
 from distutils import log
@@ -24,11 +25,9 @@ try:
 except pkg_resources.ResolutionError:
     with_cython = False
     print('Distribution mode: Compiling from Cython-generated .cpp sources.')
-    from setuptools.command.build_ext import build_ext
 else:
     with_cython = True
     print('Development mode: Compiling Cython modules from .pyx sources.')
-    from Cython.Distutils.build_ext import new_build_ext as build_ext
 
 
 class custom_build_ext(build_ext):
@@ -45,7 +44,23 @@ class custom_build_ext(build_ext):
     """
 
     def finalize_options(self):
+        if with_cython:
+            # compile *.pyx source files to *.cpp using cythonize
+            from Cython.Build import cythonize
+
+            # optionally enable line tracing for test coverage support
+            linetrace = os.environ.get("CYTHON_TRACE") == "1"
+            self.distribution.ext_modules[:] = cythonize(
+                self.distribution.ext_modules,
+                force=self.force,
+                quiet=not self.verbose,
+                compiler_directives={
+                    "linetrace": linetrace,
+                    "language_level": 3,
+                })
+
         build_ext.finalize_options(self)
+
         if self.compiler is None:
             # we use this variable with tox to build using GCC on Windows.
             # https://bitbucket.org/hpk42/tox/issues/274/specify-compiler
@@ -115,6 +130,10 @@ class custom_build_ext(build_ext):
         else:
             for undef in ext.undef_macros:
                 macros.append((undef,))
+
+        if os.environ.get("CYTHON_TRACE") == "1":
+            log.debug("adding -DCYTHON_TRACE to preprocessor macros")
+            macros.append(("CYTHON_TRACE", 1))
 
         # compile the source code to object files.
         objects = self.compiler.compile(sources,

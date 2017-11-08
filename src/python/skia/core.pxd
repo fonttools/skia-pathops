@@ -12,5 +12,4 @@ cdef extern from "SkPath.h":
 
     cdef cppclass SkPath:
         SkPath() except +
-        SkPath(SkPath& path)
-
+        SkPath(SkPath& path) except +
