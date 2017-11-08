@@ -5,7 +5,7 @@ env:
     # pip dependencies to _build_ project
     - BUILD_DEPENDS="-r build-requirements.txt"
     # pip dependencies to _test_ project
-    - TEST_DEPENDS="tox"
+    - TEST_DEPENDS="pytest"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
 
