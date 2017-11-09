@@ -11,7 +11,7 @@ from .core cimport (
 )
 
 cpdef int test():
-    # cdef SkOpBuilder builder
+    cdef SkOpBuilder builder
     cdef SkPath path1, path2, result
     cdef SkPath.Iter iterator
     cdef SkPoint p[4]
@@ -40,13 +40,11 @@ cpdef int test():
     path2.lineTo(5940, 2790)
     path2.close()
 
-    # builder.add(path1, kUnion_SkPathOp)
-    # builder.add(path2, kUnion_SkPathOp)
-    # ok = builder.resolve(&result)
-    ok = 1
+    builder.add(path1, kUnion_SkPathOp)
+    builder.add(path2, kUnion_SkPathOp)
+    ok = builder.resolve(&result)
 
-    # iterator = SkPath.Iter(result, False)
-    iterator = SkPath.Iter(path2, False)
+    iterator = SkPath.Iter(result, False)
 
     if ok:
         verb = iterator.next(p, False)
