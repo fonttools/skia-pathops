@@ -362,19 +362,6 @@ libraries = [
 
 extensions = [
     Extension(
-        "skia.core",
-        sources=[
-            os.path.join(pkg_dir, 'skia', 'core' + ext),
-        ],
-        depends=[
-            os.path.join(skia_dir, 'include', 'core', 'SkPath.h'),
-        ],
-        define_macros=define_macros,
-        include_dirs=include_dirs,
-        extra_compile_args=extra_compile_args,
-        language="c++",
-    ),
-    Extension(
         "skia.pathops",
         sources=[
             os.path.join(pkg_dir, 'skia', 'pathops' + ext),
