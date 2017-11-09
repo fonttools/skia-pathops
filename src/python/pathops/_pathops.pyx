@@ -1,4 +1,4 @@
-from .core cimport (
+from ._skia.core cimport (
     SkPath,
     SkPoint,
     kMove_Verb,
@@ -9,8 +9,10 @@ from .core cimport (
     kClose_Verb,
     kDone_Verb
 )
+from ._skia.pathops cimport SkOpBuilder, kUnion_SkPathOp
 
-cpdef int test():
+
+cpdef int demo():
     cdef SkOpBuilder builder
     cdef SkPath path1, path2, result
     cdef SkPath.Iter iterator

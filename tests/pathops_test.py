@@ -1,5 +1,5 @@
-import skia.pathops
+from pathops import _pathops
 
-def test_dummy():
-    assert skia.pathops.test()
+def test_demo():
+    assert _pathops.demo()
 

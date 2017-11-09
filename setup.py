@@ -362,9 +362,9 @@ libraries = [
 
 extensions = [
     Extension(
-        "skia.pathops",
+        "pathops._pathops",
         sources=[
-            os.path.join(pkg_dir, 'skia', 'pathops' + ext),
+            os.path.join(pkg_dir, 'pathops', '_pathops' + ext),
         ],
         depends=[
             os.path.join(skia_dir, 'include', 'pathops', 'SkPathOps.h'),
