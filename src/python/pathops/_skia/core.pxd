@@ -32,6 +32,8 @@ cdef extern from "SkPath.h":
 
         void close()
 
+        void dump()
+
         cppclass Iter:
 
             Iter() except +
