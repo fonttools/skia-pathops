@@ -24,3 +24,6 @@ htmlcov/
 
 # OSX Finder
 .DS_Store
+
+# Generated cpp file(s) from Cython source
+src/python/pathops/_pathops.cpp
