@@ -5,7 +5,7 @@ branch = True
 plugins = Cython.Coverage
 
 # list of directories or packages to measure
-source = src/python/skia
+source = src/python/pathops
 
 [report]
 # Regexes for lines to exclude from consideration
