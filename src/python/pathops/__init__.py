@@ -1,6 +1,7 @@
 from ._pathops import (
     PathPen,
     Path,
+    op,
     OpBuilder,
     DIFFERENCE,
     INTERSECTION,
@@ -13,4 +14,11 @@ from .errors import (
     PathOpsError,
     UnsupportedVerbError,
     OpenPathError,
+)
+
+from .operations import (
+    union,
+    difference,
+    intersection,
+    xor,
 )
