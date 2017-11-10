@@ -1,1 +1,10 @@
-from ._pathops import PathPen, Path
+from ._pathops import (
+    PathPen,
+    Path,
+)
+
+from .errors import (
+    PathOpsError,
+    UnsupportedVerbError,
+    OpenPathError,
+)
