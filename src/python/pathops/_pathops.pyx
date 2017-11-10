@@ -11,14 +11,17 @@ from ._skia.core cimport (
 )
 from ._skia.pathops cimport SkOpBuilder, kUnion_SkPathOp
 
+from .errors import (
+    PathOpsError,
+    UnsupportedVerbError,
+    OpenPathError,
+)
+
 
 cdef class Path:
 
     cdef SkPath path
     cdef PathPen pen
-
-    def __cinit__(self):
-        self.pen = PathPen(self)
 
     def __init__(self, other_path=None):
         if other_path is None:
@@ -26,34 +29,57 @@ cdef class Path:
         cdef Path static_path = other_path
         self.path = SkPath(static_path.path)
 
-    def getPen(self):
-        return self.pen
+    def getPen(self, allow_open_paths=True):
+        return PathPen(self, allow_open_paths=allow_open_paths)
 
     def draw(self, pen):
         cdef SkPoint p[4]
         cdef SkPath.Verb verb
         cdef SkPath.Iter iterator = SkPath.Iter(self.path, False)
+        cdef bint closed = False
+
+        verb = iterator.next(p, False)
+        if verb == kDone_Verb:
+            return  # empty path
+        assert verb == kMove_Verb
+        pen.moveTo((p[0].x(), p[0].y()))
 
         verb = iterator.next(p, False)
         while verb != kDone_Verb:
+
             if verb == kMove_Verb:
+                if not closed:
+                    # skia contours starting with "moveTo" are implicitly
+                    # open, unless they end with a "close" verb
+                    pen.endPath()
                 pen.moveTo((p[0].x(), p[0].y()))
+                closed = False
+
             elif verb == kLine_Verb:
                 pen.lineTo((p[1].x(), p[1].y()))
+
             elif verb == kCubic_Verb:
                 pen.curveTo(
                     (p[1].x(), p[1].y()),
                     (p[2].x(), p[2].y()),
                     (p[3].x(), p[3].y()))
+
             elif verb == kQuad_Verb:
                 pen.qCurveTo(
                     (p[1].x(), p[1].y()),
                     (p[2].x(), p[2].y()))
+
             elif verb == kConic_Verb:
-                raise ValueError("conic is unsupported")
+                raise UnsupportedVerbError("conicTo")
+
             elif verb == kClose_Verb:
                 pen.closePath()
+                closed = True
+
             verb = iterator.next(p, False)
+
+        if not closed:
+            pen.endPath()
 
     def dump(self):
         # prints a text repesentation of SkPath to stdout
@@ -62,10 +88,17 @@ cdef class Path:
 
 cdef class PathPen:
 
+    cdef Path path
     cdef SkPath *path_ptr
+    cdef bint allow_open_paths
 
-    def __cinit__(self, Path path):
+    def __cinit__(self, Path path, bint allow_open_paths=True):
+        # need to keep a reference to the parent Path object in case it's
+        # garbage-collected before us and later we attempt to deref the
+        # pointer to the wrapped SkPath instance
+        self.path = path
         self.path_ptr = &path.path
+        self.allow_open_paths = allow_open_paths
 
     cpdef moveTo(self, pt):
         self.path_ptr.moveTo(pt[0], pt[1])
@@ -89,8 +122,8 @@ cdef class PathPen:
         self.path_ptr.close()
 
     cpdef endPath(self):
-        # XXX can a SkPath be "open"? How does SkOpBuilder handles them?
-        pass
+        if not self.allow_open_paths:
+            raise OpenPathError()
 
     cpdef addComponent(self, glyphName, transformation):
         pass
