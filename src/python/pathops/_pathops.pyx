@@ -11,6 +11,7 @@ from ._skia.core cimport (
     kDone_Verb
 )
 from ._skia.pathops cimport (
+    Op,
     SkOpBuilder,
     SkPathOp,
     kDifference_SkPathOp,
@@ -161,6 +162,13 @@ cdef list decompose_quadratic_segment(tuple points):
         quad_segments.append((points[i], implied_pt))
     quad_segments.append((points[-2], points[-1]))
     return quad_segments
+
+
+cpdef Path op(Path one, Path two, SkPathOp operator):
+    cdef Path result = Path()
+    if Op(one.path, two.path, operator, &result.path):
+        return result
+    raise PathOpsError("operation did not succeed")
 
 
 cdef class OpBuilder:

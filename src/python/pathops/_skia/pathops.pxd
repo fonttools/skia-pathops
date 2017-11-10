@@ -10,6 +10,8 @@ cdef extern from "SkPathOps.h":
         kXOR_SkPathOp,                   # exclusive-or the two paths
         kReverseDifference_SkPathOp      # subtract the first path from the op path
 
+    bint Op(const SkPath& one, const SkPath& two, SkPathOp op, SkPath* result)
+
     cdef cppclass SkOpBuilder:
 
         SkOpBuilder() except +
