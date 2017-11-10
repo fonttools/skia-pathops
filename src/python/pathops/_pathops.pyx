@@ -1,6 +1,7 @@
 from ._skia.core cimport (
     SkPath,
     SkPoint,
+    SkScalar,
     kMove_Verb,
     kLine_Verb,
     kQuad_Verb,
@@ -113,9 +114,11 @@ cdef class PathPen:
             pt2[0], pt2[1],
             pt3[0], pt3[1])
 
-    cpdef qCurveTo(self, pt1, pt2):
-        # TODO TrueType spline can have multiple offcurves, split
-        # into atomic quadratic curves
+    def qCurveTo(self, *points):
+        for pt1, pt2 in decompose_quadratic_segment(points):
+            self._qCurveToOne(pt1, pt2)
+
+    cdef _qCurveToOne(self, pt1, pt2):
         self.path_ptr.quadTo(pt1[0], pt1[1], pt2[0], pt2[1])
 
     cpdef closePath(self):
@@ -127,6 +130,23 @@ cdef class PathPen:
 
     cpdef addComponent(self, glyphName, transformation):
         pass
+
+
+cdef list decompose_quadratic_segment(tuple points):
+    cdef:
+        int i, n = len(points) - 1
+        list quad_segments = []
+        SkScalar x, y, nx, ny
+        tuple implied_pt
+
+    assert n > 0
+    for i in range(n - 1):
+        x, y = points[i]
+        nx, ny = points[i+1]
+        implied_pt = (0.5 * (x + nx), 0.5 * (y + ny))
+        quad_segments.append((points[i], implied_pt))
+    quad_segments.append((points[-2], points[-1]))
+    return quad_segments
 
 
 cpdef int demo():

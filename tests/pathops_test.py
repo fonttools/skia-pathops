@@ -66,3 +66,18 @@ class PathTest(object):
         pen.moveTo((0, 0))
         with pytest.raises(OpenPathError):
             pen.endPath()
+
+    def test_decompose_quadratic_segments(self):
+        rec = RecordingPen()
+        path = Path()
+        pen = path.getPen()
+        pen.moveTo((0, 0))
+        pen.qCurveTo((1, 1), (2, 2), (3, 3))
+        pen.closePath()
+        path.draw(rec)
+        assert rec.value == [
+            ('moveTo', ((0.0, 0.0),)),
+            ('qCurveTo', ((1.0, 1.0), (1.5, 1.5))),
+            ('qCurveTo', ((2.0, 2.0), (3.0, 3.0))),
+            ('lineTo', ((0.0, 0.0),)),
+            ('closePath', ())]
