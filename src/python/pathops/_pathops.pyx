@@ -10,13 +10,27 @@ from ._skia.core cimport (
     kClose_Verb,
     kDone_Verb
 )
-from ._skia.pathops cimport SkOpBuilder, kUnion_SkPathOp
-
+from ._skia.pathops cimport (
+    SkOpBuilder,
+    SkPathOp,
+    kDifference_SkPathOp,
+    kIntersect_SkPathOp,
+    kUnion_SkPathOp,
+    kXOR_SkPathOp,
+    kReverseDifference_SkPathOp,
+)
 from .errors import (
     PathOpsError,
     UnsupportedVerbError,
     OpenPathError,
 )
+
+
+DIFFERENCE = kDifference_SkPathOp
+INTERSECTION = kIntersect_SkPathOp
+UNION = kUnion_SkPathOp
+XOR = kXOR_SkPathOp
+REVERSE_DIFFERENCE = kReverseDifference_SkPathOp
 
 
 cdef class Path:
@@ -147,6 +161,20 @@ cdef list decompose_quadratic_segment(tuple points):
         quad_segments.append((points[i], implied_pt))
     quad_segments.append((points[-2], points[-1]))
     return quad_segments
+
+
+cdef class OpBuilder:
+
+    cdef SkOpBuilder builder
+
+    cpdef add(self, Path path, SkPathOp operator):
+        self.builder.add(path.path, operator)
+
+    cpdef Path resolve(self):
+        cdef Path result = Path()
+        if self.builder.resolve(&result.path):
+            return result
+        raise PathOpsError("operation did not succeed")
 
 
 cpdef int demo():
