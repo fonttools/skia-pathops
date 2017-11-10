@@ -1,5 +1,9 @@
 from pathops import _pathops
-from pathops import Path, PathPen
+from pathops import Path, PathPen, OpenPathError
+
+from fontTools.pens.recordingPen import RecordingPen
+
+import pytest
 
 
 def test_demo():
@@ -16,6 +20,7 @@ class PathTest(object):
         path = Path()
         pen = path.getPen()
         assert isinstance(pen, PathPen)
+        assert id(pen) != id(path.getPen())
 
     def test_copy(self):
         path1 = Path()
@@ -34,3 +39,30 @@ class PathTest(object):
         path2 = Path()
         path.draw(path2.getPen())
 
+    def test_allow_open_contour(self):
+        rec = RecordingPen()
+        path = Path()
+        pen = path.getPen()
+        pen.moveTo((0, 0))
+        # pen.endPath() is implicit here
+        pen.moveTo((1, 0))
+        pen.lineTo((1, 1))
+        pen.curveTo((2, 2), (3, 3), (4, 4))
+        pen.endPath()
+        path.draw(rec)
+        assert rec.value == [
+            ('moveTo', ((0.0, 0.0),)),
+            ('endPath', ()),
+            ('moveTo', ((1.0, 0.0),)),
+            ('lineTo', ((1.0, 1.0),)),
+            ('curveTo', ((2.0, 2.0), (3.0, 3.0), (4.0, 4.0))),
+            ('endPath', ()),
+        ]
+
+    def test_raise_open_contour_error(self):
+        rec = RecordingPen()
+        path = Path()
+        pen = path.getPen(allow_open_paths=False)
+        pen.moveTo((0, 0))
+        with pytest.raises(OpenPathError):
+            pen.endPath()
