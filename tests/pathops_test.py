@@ -1,14 +1,9 @@
-from pathops import _pathops
 from pathops import (
     Path, PathPen, OpenPathError, OpBuilder, UNION,
 )
 from fontTools.pens.recordingPen import RecordingPen
 
 import pytest
-
-
-def test_demo():
-    assert _pathops.demo()
 
 
 class PathTest(object):
