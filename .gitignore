@@ -17,7 +17,11 @@ dist
 .cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
+
+# cython annotated html files
+src/python/pathops/_pathops.html
 
 # emacs backup files
 *~
