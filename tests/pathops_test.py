@@ -1,6 +1,7 @@
 from pathops import _pathops
-from pathops import Path, PathPen, OpenPathError
-
+from pathops import (
+    Path, PathPen, OpenPathError, OpBuilder, UNION,
+)
 from fontTools.pens.recordingPen import RecordingPen
 
 import pytest
@@ -96,5 +97,72 @@ class PathTest(object):
             ('moveTo', ((100.0, 100.0),)),
             ('lineTo', ((100.0, 200.0),)),
             # ('lineTo', ((100.0, 100.0),)),
+            ('closePath', ())]
+
+
+class OpBuilderTest(object):
+
+    def test_init(self):
+        builder = OpBuilder()
+
+    def test_add(self):
+        path = Path()
+        pen = path.getPen()
+        pen.moveTo((5, -225))
+        pen.lineTo((-225, 7425))
+        pen.lineTo((7425, 7425))
+        pen.lineTo((7425, -225))
+        pen.lineTo((-225, -225))
+        pen.closePath()
+
+        builder = OpBuilder()
+        builder.add(path, UNION)
+
+    def test_resolve(self):
+        path1 = Path()
+        pen1 = path1.getPen()
+        pen1.moveTo((5, -225))
+        pen1.lineTo((-225, 7425))
+        pen1.lineTo((7425, 7425))
+        pen1.lineTo((7425, -225))
+        pen1.lineTo((-225, -225))
+        pen1.closePath()
+
+        path2 = Path()
+        pen2 = path2.getPen()
+        pen2.moveTo((5940, 2790))
+        pen2.lineTo((5940, 2160))
+        pen2.lineTo((5970, 1980))
+        pen2.lineTo((5688, 773669888))
+        pen2.lineTo((5688, 2160))
+        pen2.lineTo((5688, 2430))
+        pen2.lineTo((5400, 4590))
+        pen2.lineTo((5220, 4590))
+        pen2.lineTo((5220, 4920))
+        pen2.curveTo((5182.22900390625, 4948.328125),
+                     (5160, 4992.78662109375),
+                     (5160, 5040.00048828125))
+        pen2.lineTo((5940, 2790))
+        pen2.closePath()
+
+        builder = OpBuilder()
+        builder.add(path1, UNION)
+        builder.add(path2, UNION)
+        result = builder.resolve()
+
+        rec = RecordingPen()
+        result.draw(rec)
+        assert rec.value == [
+            ('moveTo', ((5316.0, 4590.0),)),
+            ('lineTo', ((5220.0, 4590.0),)),
+            ('lineTo', ((5220.0, 4866.92333984375),)),
+            ('lineTo', ((5316.0, 4590.0),)),
+            ('closePath', ()),
+            ('moveTo', ((-225.0, 7425.0),)),
+            ('lineTo', ((5.0, -225.0),)),
+            ('lineTo', ((7425.0, -225.0),)),
+            ('lineTo', ((7425.0, 7425.0),)),
+            ('lineTo', ((5688.0, 7425.0),)),
+            ('lineTo', ((-225.0, 7425.0),)),
             ('closePath', ())]
 
