@@ -8,7 +8,8 @@ from ._skia.core cimport (
     kConic_Verb,
     kCubic_Verb,
     kClose_Verb,
-    kDone_Verb
+    kDone_Verb,
+    kWinding_FillType,
 )
 from ._skia.pathops cimport (
     Op,

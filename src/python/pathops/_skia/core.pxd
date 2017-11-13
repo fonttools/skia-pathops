@@ -34,6 +34,9 @@ cdef extern from "SkPath.h":
 
         void dump()
 
+        void setFillType(FillType ft)
+        FillType getFillType()
+
         cppclass Iter:
 
             Iter() except +
@@ -59,3 +62,9 @@ cdef extern from * namespace "SkPath":
         kCubic_Verb,
         kClose_Verb,
         kDone_Verb
+
+    enum FillType:
+        kWinding_FillType,
+        kEvenOdd_FillType,
+        kInverseWinding_FillType,
+        kInverseEvenOdd_FillType
