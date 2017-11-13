@@ -160,6 +160,18 @@ class custom_build_ext(build_ext):
             build_temp=self.build_temp,
             target_lang=language)
 
+    def run(self):
+        # Setuptools `develop` command (used by `pip install -e .`) only calls
+        # `build_ext`, unlike the `install` command which in turn calls `build`
+        # and all its related sub-commands. Linking the Cython extension module
+        # with the Skia static library fails because the `build_clib` command
+        # is not automatically called when doing an editable install.
+        # Here we make sure that `build_clib` command is always run before the
+        # the extension module is compiled, even when doing editable install.
+        # https://github.com/pypa/setuptools/issues/1040
+        self.run_command("build_clib")
+        build_ext.run(self)
+
 
 class custom_build_clib(build_clib):
     """ Custom build_clib command which allows to pass compiler-specific
