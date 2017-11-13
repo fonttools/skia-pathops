@@ -4,7 +4,8 @@ Python bindings for the `Google Skia <https://skia.org>`__ library's
 `Path Ops <https://skia.org/dev/present/pathops>`__ module, performing
 boolean operations on paths (intersection, union, difference, xor).
 
-## Build
+Build
+=====
 
 A recent version of `Cython <https://github.com/cython/cython>`__ is
 required to build the package (see the `build-requirements.txt` file for
