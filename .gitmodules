@@ -1,6 +1,6 @@
 [submodule "skia"]
 	path = src/cpp/skia
-	url = https://skia.googlesource.com/skia.git
+	url = https://github.com/fonttools/skia/
 	ignore = dirty
 [submodule "multibuild"]
 	path = multibuild
