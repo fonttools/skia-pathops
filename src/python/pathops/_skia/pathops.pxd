@@ -19,3 +19,6 @@ cdef extern from "SkPathOps.h":
         void add(const SkPath& path, SkPathOp _operator)
 
         bint resolve(SkPath* result)
+
+        @staticmethod
+        bint FixWinding(SkPath* path)

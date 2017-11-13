@@ -183,3 +183,9 @@ cdef class OpBuilder:
         if self.builder.resolve(&result.path):
             return result
         raise PathOpsError("operation did not succeed")
+
+
+cpdef fix_winding(Path path):
+    cdef SkPath *skpath = &path.path
+    if not SkOpBuilder.FixWinding(skpath):
+        raise PathOpsError("failed to fix winding direction")

@@ -8,6 +8,7 @@ from ._pathops import (
     UNION,
     XOR,
     REVERSE_DIFFERENCE,
+    fix_winding,
 )
 
 from .errors import (
