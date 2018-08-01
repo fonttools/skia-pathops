@@ -261,7 +261,8 @@ class custom_build_clib(build_clib):
 
 ext = '.pyx' if with_cython else '.cpp'
 pkg_dir = os.path.join("src", "python")
-skia_dir = os.path.join("src", "cpp", "skia")
+cpp_dir = os.path.join("src", "cpp")
+skia_dir = os.path.join(cpp_dir, "skia")
 
 skia_src = [
     os.path.join(skia_dir, "src", "core", "SkArenaAlloc.cpp"),
@@ -313,9 +314,11 @@ skia_src = [
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsWinding.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathWriter.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkReduceOrder.cpp"),
+    os.path.join(skia_dir, "src", "utils", "SkUTF.cpp"),
     os.path.join(skia_dir, "src", "ports", "SkDebug_stdio.cpp"),
     os.path.join(skia_dir, "src", "ports", "SkMemory_malloc.cpp"),
     os.path.join(skia_dir, "src", "ports", "SkOSFile_stdio.cpp"),
+    os.path.join(cpp_dir, "SkMallocThrow.cpp"),
 ]
 
 if os.name == "nt":
@@ -335,6 +338,7 @@ include_dirs = [
     os.path.join(skia_dir, 'include', 'core'),
     os.path.join(skia_dir, 'include', 'pathops'),
     os.path.join(skia_dir, 'include', 'private'),
+    os.path.join(skia_dir, 'include', 'gpu'),
     os.path.join(skia_dir, 'src', 'core'),
     os.path.join(skia_dir, 'src', 'opts'),
     os.path.join(skia_dir, 'src', 'shaders'),
@@ -355,6 +359,7 @@ extra_compile_args = {
 }
 
 define_macros = {
+    "": [("SK_SUPPORT_GPU", "0")],
     # On Windows Python 2.7, pyconfig.h defines "hypot" as "_hypot",
     # This clashes with GCC's cmath, and causes compilation errors when
     # building under MinGW: http://bugs.python.org/issue11566
