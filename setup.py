@@ -358,12 +358,17 @@ extra_compile_args = {
     ],
 }
 
+shared_macros = [
+    ("SK_SUPPORT_GPU", "0"),
+]
 define_macros = {
-    "": [("SK_SUPPORT_GPU", "0")],
+    "": shared_macros,
     # On Windows Python 2.7, pyconfig.h defines "hypot" as "_hypot",
     # This clashes with GCC's cmath, and causes compilation errors when
     # building under MinGW: http://bugs.python.org/issue11566
-    "mingw32": [("_hypot", "hypot")],
+    "mingw32": shared_macros + [
+        ("_hypot", "hypot"),
+    ],
 }
 
 libraries = [
