@@ -10,24 +10,44 @@ import pkg_resources
 import sys
 import os
 import platform
+from io import open
+import re
 
 
-needs_pytest = {'pytest', 'test'}.intersection(sys.argv)
-pytest_runner = ['pytest_runner'] if needs_pytest else []
-needs_wheel = {'bdist_wheel'}.intersection(sys.argv)
-wheel = ['wheel'] if needs_wheel else []
-
-
-# use Cython if available, else try use pre-generated .cpp sources
-cython_min_version = '0.27.3'
+# check if minimum required Cython is available
+cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
+with open("pyproject.toml", "r", encoding="utf-8") as fp:
+    for line in fp:
+        m = cython_version_re.match(line)
+        if m:
+            cython_min_version = m.group(1)
+            break
+    else:
+        sys.exit("error: could not parse cython version from pyproject.toml")
 try:
     pkg_resources.require("cython >= %s" % cython_min_version)
 except pkg_resources.ResolutionError:
     with_cython = False
-    print('Distribution mode: Compiling from Cython-generated .cpp sources.')
 else:
     with_cython = True
-    print('Development mode: Compiling Cython modules from .pyx sources.')
+
+argv = sys.argv[1:]
+
+# bail out early if we are compiling the cython extension module
+if ({"build",
+     "build_ext",
+     "bdist_wheel",
+     "install",
+     "develop",
+     "test"}.intersection(argv) and not with_cython):
+    sys.exit(
+        "error: the required Cython >= %s was not found" % cython_min_version
+    )
+
+needs_pytest = {'pytest', 'test'}.intersection(argv)
+pytest_runner = ['pytest_runner'] if needs_pytest else []
+needs_wheel = {'bdist_wheel'}.intersection(argv)
+wheel = ['wheel'] if needs_wheel else []
 
 
 class custom_build_ext(build_ext):
@@ -259,7 +279,6 @@ class custom_build_clib(build_clib):
                                             debug=self.debug)
 
 
-ext = '.pyx' if with_cython else '.cpp'
 pkg_dir = os.path.join("src", "python")
 cpp_dir = os.path.join("src", "cpp")
 skia_dir = os.path.join(cpp_dir, "skia")
@@ -386,7 +405,7 @@ extensions = [
     Extension(
         "pathops._pathops",
         sources=[
-            os.path.join(pkg_dir, 'pathops', '_pathops' + ext),
+            os.path.join(pkg_dir, 'pathops', '_pathops.pyx'),
         ],
         depends=[
             os.path.join(skia_dir, 'include', 'pathops', 'SkPathOps.h'),
