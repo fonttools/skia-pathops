@@ -4,4 +4,6 @@ requires = [
     "wheel",
     "setuptools_scm",
     "cython >= 0.28.4",
+    # this needs --extra-index-url "https://pypi.anaconda.org/carlkl/simple/"
+    "mingwpy >= 0.1.0b3; python_version < '3' and sys_platform == 'win32'"
 ]
