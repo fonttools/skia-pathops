@@ -398,14 +398,15 @@ extensions = [
     ),
 ]
 
-# with open('README.rst', 'r') as f:
-#     long_description = f.read()
+with open('README.md', 'r') as f:
+    long_description = f.read()
 
 setup_params = dict(
     name="skia-pathops",
     version="0.1.0.dev0",
     description="Boolean operations on paths using the Skia library",
-    # long_description=long_description,
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Khaled Hosny, Cosimo Lupo",
     license="BSD-3-Clause",
     package_dir={"": pkg_dir},
@@ -417,11 +418,17 @@ setup_params = dict(
         'build_clib': custom_build_clib,
     },
     setup_requires=pytest_runner + wheel,
-    tests_require=[
-        'pytest>=2.8',
-    ],
     install_requires=[
     ],
+    extras_require={
+        "testing": [
+            "pytest >= 3.0.0, <4",
+            "pytest-cov >= 2.5.1, <3",
+            "pytest-xdist >= 1.22.2, <2",
+            "pytest-randomly >= 1.2.3, <2",
+            "fonttools >= 3.19",
+        ],
+    },
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
