@@ -401,9 +401,11 @@ extensions = [
 with open('README.md', 'r') as f:
     long_description = f.read()
 
+version_file = os.path.join(pkg_dir, "pathops", "_version.py")
+
 setup_params = dict(
     name="skia-pathops",
-    version="0.1.0.dev0",
+    use_scm_version={"write_to": version_file},
     description="Boolean operations on paths using the Skia library",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -417,7 +419,7 @@ setup_params = dict(
         'build_ext': custom_build_ext,
         'build_clib': custom_build_clib,
     },
-    setup_requires=pytest_runner + wheel,
+    setup_requires=["setuptools_scm"] + pytest_runner + wheel,
     install_requires=[
     ],
     extras_require={
