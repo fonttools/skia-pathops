@@ -1,10 +1,10 @@
 environment:
-  TOXENV: "py-wheel"
+  TOXENV: "py"
   matrix:
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
-      TOXENV: "py-mingw32-wheel"
+      DISTUTILS_COMPILER: "mingw32"
 
     # - PYTHON: "C:\\Python36"
     #   PYTHON_VERSION: "3.6"
@@ -13,7 +13,7 @@ environment:
     # - PYTHON: "C:\\Python27-x64"
     #   PYTHON_VERSION: "2.7"
     #   PYTHON_ARCH: "64"
-    #   TOXENV: "py-mingw32-wheel"
+    #   DISTUTILS_COMPILER: "mingw32"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6"
@@ -44,23 +44,30 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
 
   # check that we have the expected version and architecture for Python
-  - "python --version"
-  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
+  - python --version
+  - python -c "import struct; print(struct.calcsize('P') * 8)"
 
   # upgrade pip to avoid out-of-date warnings
-  - "python -m pip install --disable-pip-version-check --upgrade pip"
-  - "pip --version"
+  - python -m pip install --disable-pip-version-check --upgrade pip
+  - pip --version
 
   # upgrade setuptools and virtualenv
-  - "pip install --upgrade setuptools virtualenv"
+  - pip install --upgrade setuptools virtualenv
 
   # install tox to run test suite in a virtual environment
-  - "pip install -U tox"
+  - pip install --upgrade tox
+
+  # build wheel
+  - tox -e wheel
+  # get the full path to the compiled wheel (ugly but works)
+  - dir /s /b dist\skia_pathops*.whl > wheel.pth
+  - set /p WHEEL_PATH=<wheel.pth
 
 build: false
 
 test_script:
-  - "tox"
+  # run tests on the compiled wheel
+  - tox --installpkg "%WHEEL_PATH%"
 
 on_failure:
   # print the content of tox *.log files
@@ -72,4 +79,4 @@ on_failure:
 
 artifacts:
   # archive the generated packages in the ci.appveyor.com build report
-  - path: .tox\dist\*.whl
+  - path: dist\*.whl
