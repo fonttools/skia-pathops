@@ -1,0 +1,12 @@
+# we use setuptools_scm as git file finder, however we still need to use a
+# MANIFEST.in to either exclude files under VCS from the generated sdist,
+# or to include files from git submodules which are not included by default
+# by setuptools_scm
+# https://github.com/pypa/setuptools_scm/issues/206
+exclude .gitignore .gitmodules
+exclude appveyor.yml .travis.yml
+exclude config.sh
+include src/cpp/skia/README
+include src/cpp/skia/LICENSE
+recursive-include src/cpp/skia/src *.cpp *.h
+recursive-include src/cpp/skia/include *.cpp *.h
