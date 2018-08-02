@@ -2,10 +2,6 @@ env:
   global:
     # directory containing the project source
     - REPO_DIR=.
-    # pip dependencies to _build_ project
-    - BUILD_DEPENDS="-r build-requirements.txt"
-    # pip dependencies to _test_ project
-    - TEST_DEPENDS="-r test-requirements.txt"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
 
