@@ -6,6 +6,8 @@ env:
     - TEST_DEPENDS="tox"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
+    - TWINE_USERNAME="anthrotype"
+    - secure: tyo+MBUP9MPumzksvhtoCD2/2KUZXJposWlijeG0Jke1DFLQCHPytagx8QPiddhpktXwMHCgKeJtEB6GZn5/UCx5yZUVYWZNi0jpA9w1LIvhkpwK4xLHCYAP5AeUWqnChkb063ZckJT27OAcNtwyFaH+6x0sFBnFuBFNJpko+5EyLqpLRp9tW5NcPTu+puq0T71t4oDRaJoSf9c3yZ61dMcs+O0jRSm6maTvaIyMJsrbz1BLvgSNfTCYQQMDgP6B76EQaIeUM0CgRC4bWDoRQA51nHndqQtH1x/ehZ1jIyT1PSL3DOrnq6udvlSkw0PMaByIszKn5ztNQDDEgAbv+VXKLaVlI2xEgU9Om+QEsWMKQs2NzKXAFpDcuAohsXFXAWl4B0BPXDXJbeQJlFOcuv1EYYMRgECGNYdYBjnvaUqFdwCXC0HhJESTAf1MSN/cXKPJkBt1Ew9x8kNAm/paQwuywWks2Yy/G5o3fIpKHrkcdDRGZDH6i0sC7DXjjywpoUClfe5oNWP2ikjVxSIREmZqyPz4YFP/NfHUuwTY6kLVqYQOlvRvrxMarWEtFiJDsnu9dw3mPphmqvBnVJAUKn31uXR8RBObPza/ZMHsxRFefNa8ui6+SmLiPiEoEFFXjpFDxu7eLhS1gvsTyWa0kVxutOnYNXv5OMkon0Twr5I=
 
 language: python
 # The travis Python version is unrelated to the version we build and test
@@ -39,6 +41,7 @@ matrix:
     - os: linux
       env:
         - MB_PYTHON_VERSION=3.6
+        - BUILD_SDIST=true
     # - os: linux
     #   env:
     #     - MB_PYTHON_VERSION=3.6
@@ -69,3 +72,15 @@ install:
 
 script:
   - install_run $PLAT
+
+after_success:
+  - |
+    if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_REPO_SLUG" == "fonttools/skia-pathops" ]; then
+      pip install --upgrade twine
+      twine upload wheelhouse/skia_pathops*.whl
+      if [ "$BUILD_SDIST" == true ]; then
+        pip install --upgrade setuptools setuptools_scm
+        python setup.py --quiet sdist --dist-dir dist
+        twine upload dist/skia-pathops*.zip
+      fi
+    fi
