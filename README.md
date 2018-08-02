@@ -9,7 +9,7 @@ Build
 =====
 
 A recent version of [Cython](https://github.com/cython/cython) is
-required to build the package (see the `build-requirements.txt` file for
+required to build the package (see the `pyproject.toml` file for
 the minimum required version).
 
 For developers we recommend installing in editable mode using
