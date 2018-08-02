@@ -9,4 +9,4 @@ exclude config.sh
 include src/cpp/skia/README
 include src/cpp/skia/LICENSE
 recursive-include src/cpp/skia/src *.cpp *.h
-recursive-include src/cpp/skia/include *.cpp *.h
+recursive-include src/cpp/skia/include *.h
