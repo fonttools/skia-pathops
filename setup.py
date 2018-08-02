@@ -429,6 +429,7 @@ setup_params = dict(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Khaled Hosny, Cosimo Lupo",
+    author_email="fonttools@googlegroups.com",
     license="BSD-3-Clause",
     package_dir={"": pkg_dir},
     packages=find_packages(pkg_dir),
