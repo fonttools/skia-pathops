@@ -10,5 +10,23 @@ function pre_build {
 function run_tests {
     # The function is called from an empty temporary directory.
     cd ..
-    pytest
+
+    # Get absolute path to the pre-compiled wheel
+    wheelhouse=$(abspath wheelhouse)
+    wheel=$(ls ${wheelhouse}/skia_pathops*.whl | head -n 1)
+    if [ ! -e "${wheel}" ]; then
+        echo "error: can't find wheel in ${wheelhouse} folder" 1>&2
+        exit 1
+    fi
+
+    # select tox environment based on the current python version
+    # E.g.: '2.7' -> 'py27'
+    TOXENV="py${MB_PYTHON_VERSION//\./}"
+
+    # Install pre-compiled wheel and run tests against it
+    tox --installpkg "${wheel}" -e "${TOXENV}"
+
+    # clean up after us, or else running tox later on outside the docker
+    # container can lead to permission errors
+    rm -rf .tox
 }
