@@ -13,6 +13,7 @@ from ._skia.core cimport (
 )
 from ._skia.pathops cimport (
     Op,
+    Simplify,
     SkOpBuilder,
     SkPathOp,
     kDifference_SkPathOp,
@@ -168,6 +169,13 @@ cdef list decompose_quadratic_segment(tuple points):
 cpdef Path op(Path one, Path two, SkPathOp operator):
     cdef Path result = Path()
     if Op(one.path, two.path, operator, &result.path):
+        return result
+    raise PathOpsError("operation did not succeed")
+
+
+cpdef Path simplify(Path path):
+    cdef Path result = Path()
+    if Simplify(path.path, &result.path):
         return result
     raise PathOpsError("operation did not succeed")
 

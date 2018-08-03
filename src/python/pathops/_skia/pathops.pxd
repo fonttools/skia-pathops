@@ -12,6 +12,8 @@ cdef extern from "SkPathOps.h":
 
     bint Op(const SkPath& one, const SkPath& two, SkPathOp op, SkPath* result)
 
+    bint Simplify(const SkPath& path, SkPath* result)
+
     cdef cppclass SkOpBuilder:
 
         SkOpBuilder() except +

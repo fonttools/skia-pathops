@@ -2,6 +2,7 @@ from ._pathops import (
     PathPen,
     Path,
     op,
+    simplify,
     OpBuilder,
     DIFFERENCE,
     INTERSECTION,
