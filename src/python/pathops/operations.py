@@ -1,12 +1,27 @@
 from ._pathops import (
     Path,
     PathOp,
-    op,
+    OpBuilder,
+    fix_winding,
 )
 
 
+def _union_path(contours):
+    if not contours:
+        return Path()
+    builder = OpBuilder()
+    for contour in contours:
+        path = Path()
+        pen = path.getPen()
+        contour.draw(pen)
+        builder.add(path, PathOp.UNION)
+    return builder.resolve()
+
+
 def union(contours, outpen):
-    return _do(PathOp.UNION, contours, (), outpen)
+    result = _union_path(contours)
+    fix_winding(result)
+    result.draw(outpen)
 
 
 def difference(subject_contours, clip_contours, outpen):
@@ -26,16 +41,16 @@ def reverse_difference(subject_contours, clip_contours, outpen):
 
 
 def _do(operator, subject_contours, clip_contours, outpen):
-    one = Path()
-    pen = one.getPen()
-    for contour in subject_contours:
-        contour.draw(pen)
+    builder = OpBuilder()
 
-    two = Path()
-    pen = two.getPen()
-    for contour in clip_contours:
-        contour.draw(pen)
+    one = _union_path(subject_contours)
+    builder.add(one, PathOp.UNION)
 
-    result = op(one, two, operator)
+    two = _union_path(clip_contours)
+    builder.add(two, operator)
+
+    result = builder.resolve()
+
+    fix_winding(result)
 
     result.draw(outpen)
