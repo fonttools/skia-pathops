@@ -442,6 +442,7 @@ setup_params = dict(
     },
     setup_requires=["setuptools_scm"] + pytest_runner + wheel,
     install_requires=[
+        "enum34; python_version < '3.4'",
     ],
     extras_require={
         "testing": [
