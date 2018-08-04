@@ -10,6 +10,9 @@ from ._skia.core cimport (
     kClose_Verb,
     kDone_Verb,
     kWinding_FillType,
+    kEvenOdd_FillType,
+    kInverseWinding_FillType,
+    kInverseEvenOdd_FillType,
 )
 from ._skia.pathops cimport (
     Op,
@@ -27,13 +30,22 @@ from .errors import (
     UnsupportedVerbError,
     OpenPathError,
 )
+from enum import IntEnum
 
 
-DIFFERENCE = kDifference_SkPathOp
-INTERSECTION = kIntersect_SkPathOp
-UNION = kUnion_SkPathOp
-XOR = kXOR_SkPathOp
-REVERSE_DIFFERENCE = kReverseDifference_SkPathOp
+class PathOp(IntEnum):
+    DIFFERENCE = kDifference_SkPathOp
+    INTERSECTION = kIntersect_SkPathOp
+    UNION = kUnion_SkPathOp
+    XOR = kXOR_SkPathOp
+    REVERSE_DIFFERENCE = kReverseDifference_SkPathOp
+
+
+class FillType(IntEnum):
+    WINDING = kWinding_FillType
+    EVEN_ODD = kEvenOdd_FillType
+    INVERSE_WINDING = kInverseWinding_FillType
+    INVERSE_EVEN_ODD = kInverseEvenOdd_FillType
 
 
 cdef class Path:
@@ -103,6 +115,13 @@ cdef class Path:
         # prints a text repesentation of SkPath to stdout
         self.path.dump()
 
+    @property
+    def fillType(self):
+        return FillType(self.path.getFillType())
+
+    @fillType.setter
+    def fillType(self, value):
+        self.path.setFillType(FillType(value))
 
 cdef class PathPen:
 

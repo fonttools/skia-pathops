@@ -1,5 +1,5 @@
 from pathops import (
-    Path, PathPen, OpenPathError, OpBuilder, UNION,
+    Path, PathPen, OpenPathError, OpBuilder, PathOp,
 )
 from fontTools.pens.recordingPen import RecordingPen
 
@@ -111,7 +111,7 @@ class OpBuilderTest(object):
         pen.closePath()
 
         builder = OpBuilder()
-        builder.add(path, UNION)
+        builder.add(path, PathOp.UNION)
 
     def test_resolve(self):
         path1 = Path()
@@ -141,8 +141,8 @@ class OpBuilderTest(object):
         pen2.closePath()
 
         builder = OpBuilder()
-        builder.add(path1, UNION)
-        builder.add(path2, UNION)
+        builder.add(path1, PathOp.UNION)
+        builder.add(path2, PathOp.UNION)
         result = builder.resolve()
 
         rec = RecordingPen()

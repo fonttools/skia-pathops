@@ -1,14 +1,11 @@
 from ._pathops import (
     PathPen,
     Path,
+    PathOp,
+    FillType,
     op,
     simplify,
     OpBuilder,
-    DIFFERENCE,
-    INTERSECTION,
-    UNION,
-    XOR,
-    REVERSE_DIFFERENCE,
     fix_winding,
 )
 
