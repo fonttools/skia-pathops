@@ -37,6 +37,11 @@ cdef extern from "SkPath.h":
         void setFillType(FillType ft)
         FillType getFillType()
 
+        # TODO also expose optional AddPathMode enum
+        void addPath(const SkPath& src) except +
+
+        bint isConvex()
+
         cppclass Iter:
 
             Iter() except +

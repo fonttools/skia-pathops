@@ -115,6 +115,9 @@ cdef class Path:
         # prints a text repesentation of SkPath to stdout
         self.path.dump()
 
+    def addPath(self, Path path):
+        self.path.addPath(path.path)
+
     @property
     def fillType(self):
         return FillType(self.path.getFillType())
@@ -122,6 +125,11 @@ cdef class Path:
     @fillType.setter
     def fillType(self, value):
         self.path.setFillType(FillType(value))
+
+    @property
+    def isConvex(self):
+        return self.path.isConvex()
+
 
 cdef class PathPen:
 
