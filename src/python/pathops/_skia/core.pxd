@@ -42,6 +42,8 @@ cdef extern from "SkPath.h":
 
         bint isConvex()
 
+        bint contains(SkScalar x, SkScalar y)
+
         cppclass Iter:
 
             Iter() except +

@@ -133,6 +133,9 @@ cdef class Path:
     def isConvex(self):
         return self.path.isConvex()
 
+    def contains(self, tuple pt):
+        return self.path.contains(pt[0], pt[1])
+
     cpdef simplify(self, fix_winding=True):
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
