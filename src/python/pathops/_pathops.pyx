@@ -133,6 +133,16 @@ cdef class Path:
     def isConvex(self):
         return self.path.isConvex()
 
+    cpdef simplify(self, fix_winding=True):
+        if not Simplify(self.path, &self.path):
+            raise PathOpsError("simplify operation did not succeed")
+        if fix_winding:
+            self.fix_winding()
+
+    cpdef fix_winding(self):
+        if not SkOpBuilder.FixWinding(&self.path):
+            raise PathOpsError("failed to fix winding direction")
+
 
 cdef class PathPen:
 
@@ -196,11 +206,13 @@ cdef list decompose_quadratic_segment(tuple points):
     return quad_segments
 
 
-cpdef Path op(Path one, Path two, SkPathOp operator):
+cpdef Path op(Path one, Path two, SkPathOp operator, fix_winding=True):
     cdef Path result = Path()
-    if Op(one.path, two.path, operator, &result.path):
-        return result
-    raise PathOpsError("operation did not succeed")
+    if not Op(one.path, two.path, operator, &result.path):
+        raise PathOpsError("operation did not succeed")
+    if fix_winding:
+        result.fix_winding()
+    return result
 
 
 cpdef Path simplify(Path path):
@@ -224,7 +236,8 @@ cdef class OpBuilder:
         raise PathOpsError("operation did not succeed")
 
 
-cpdef fix_winding(Path path):
-    cdef SkPath *skpath = &path.path
-    if not SkOpBuilder.FixWinding(skpath):
+cpdef Path fix_winding(Path path):
+    cdef Path copy = Path(path)
+    if not SkOpBuilder.FixWinding(&copy.path):
         raise PathOpsError("failed to fix winding direction")
+    return copy
