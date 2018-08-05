@@ -9,6 +9,17 @@ from ._pathops import (
 def union(contours, outpen, fix_winding=True):
     if not contours:
         return
+    path = Path()
+    pen = path.getPen()
+    for contour in contours:
+        contour.draw(pen)
+    path.simplify(fix_winding)
+    path.draw(outpen)
+
+
+def union2(contours, outpen, fix_winding=True):
+    if not contours:
+        return
     builder = OpBuilder()
     for contour in contours:
         path = Path(contour)
@@ -19,7 +30,7 @@ def union(contours, outpen, fix_winding=True):
     result.draw(outpen)
 
 
-def union2(contours, outpen, fix_winding=True):
+def union3(contours, outpen, fix_winding=True):
     if not contours:
         return
     result = Path()
@@ -29,17 +40,6 @@ def union2(contours, outpen, fix_winding=True):
         result.addPath(path)
     result.simplify(fix_winding)
     result.draw(outpen)
-
-
-def union3(contours, outpen, fix_winding=True):
-    if not contours:
-        return
-    path = Path()
-    pen = path.getPen()
-    for contour in contours:
-        contour.draw(pen)
-    path.simplify(fix_winding)
-    path.draw(outpen)
 
 
 def union4(contours, outpen, fix_winding=True):
