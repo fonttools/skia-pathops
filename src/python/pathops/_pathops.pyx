@@ -53,10 +53,13 @@ cdef class Path:
     cdef SkPath path
     cdef PathPen pen
 
-    def __init__(self, other_path=None):
-        if other_path is None:
+    def __init__(self, other=None):
+        if other is None:
             return
-        cdef Path static_path = other_path
+        if not isinstance(other, Path):
+            other.draw(self.getPen())
+            return
+        cdef Path static_path = other
         self.path = SkPath(static_path.path)
 
     def getPen(self, allow_open_paths=True):
