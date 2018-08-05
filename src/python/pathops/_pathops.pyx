@@ -152,6 +152,12 @@ cdef class Path:
         if not SkOpBuilder.FixWinding(&self.path):
             raise PathOpsError("failed to fix winding direction")
 
+    @property
+    def contours(self):
+        pen = IterContourPen()
+        self.draw(pen)
+        yield from pen.contours
+
 
 cdef class PathPen:
 
@@ -193,6 +199,43 @@ cdef class PathPen:
     cpdef endPath(self):
         if not self.allow_open_paths:
             raise OpenPathError()
+
+    cpdef addComponent(self, glyphName, transformation):
+        pass
+
+
+cdef class IterContourPen:
+
+    cdef public list contours
+    cdef PathPen pen
+
+    def __init__(self):
+        self.contours = []
+        self.pen = None
+
+    def moveTo(self, pt):
+        assert self.pen is None
+        path = Path()
+        self.contours.append(path)
+        self.pen = path.getPen()
+        self.pen.moveTo(pt)
+
+    cpdef lineTo(self, pt):
+        self.pen.lineTo(pt)
+
+    cpdef curveTo(self, pt1, pt2, pt3):
+        self.pen.curveTo( pt1, pt2, pt3)
+
+    def qCurveTo(self, *points):
+        self.pen.qCurveTo(*points)
+
+    cpdef closePath(self):
+        self.pen.closePath()
+        self.pen = None
+
+    cpdef endPath(self):
+        self.pen.endPath()
+        self.pen = None
 
     cpdef addComponent(self, glyphName, transformation):
         pass
