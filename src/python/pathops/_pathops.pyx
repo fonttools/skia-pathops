@@ -2,6 +2,7 @@ from ._skia.core cimport (
     SkPath,
     SkPoint,
     SkScalar,
+    SkRect,
     kMove_Verb,
     kLine_Verb,
     kQuad_Verb,
@@ -136,6 +137,11 @@ cdef class Path:
     def contains(self, tuple pt):
         return self.path.contains(pt[0], pt[1])
 
+    @property
+    def bounds(self):
+        cdef SkRect r = self.path.getBounds()
+        return (r.left(), r.top(), r.right(), r.bottom())
+
     cpdef simplify(self, fix_winding=True):
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
@@ -244,3 +250,10 @@ cpdef Path fix_winding(Path path):
     if not SkOpBuilder.FixWinding(&copy.path):
         raise PathOpsError("failed to fix winding direction")
     return copy
+
+
+cpdef bint bounds_intersect(Path self, Path other):
+    return SkRect.Intersects(
+        self.path.getBounds(),
+        other.path.getBounds(),
+    )

@@ -44,6 +44,8 @@ cdef extern from "SkPath.h":
 
         bint contains(SkScalar x, SkScalar y)
 
+        const SkRect& getBounds()
+
         cppclass Iter:
 
             Iter() except +
@@ -75,3 +77,16 @@ cdef extern from * namespace "SkPath":
         kEvenOdd_FillType,
         kInverseWinding_FillType,
         kInverseEvenOdd_FillType
+
+
+cdef extern from "SkRect.h":
+
+    cdef cppclass SkRect:
+
+        SkScalar left()
+        SkScalar top()
+        SkScalar right()
+        SkScalar bottom()
+
+        @staticmethod
+        bint Intersects(const SkRect& a, const SkRect& b)
