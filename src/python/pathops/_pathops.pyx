@@ -33,10 +33,9 @@ from .errors import (
 )
 from libc.stdint cimport uint8_t
 from libc.stdlib cimport malloc, free
-from enum import IntEnum
 
 
-class PathOp(IntEnum):
+cpdef enum PathOp:
     DIFFERENCE = kDifference_SkPathOp
     INTERSECTION = kIntersect_SkPathOp
     UNION = kUnion_SkPathOp
@@ -44,7 +43,7 @@ class PathOp(IntEnum):
     REVERSE_DIFFERENCE = kReverseDifference_SkPathOp
 
 
-class FillType(IntEnum):
+cpdef enum FillType:
     WINDING = kWinding_FillType
     EVEN_ODD = kEvenOdd_FillType
     INVERSE_WINDING = kInverseWinding_FillType
@@ -80,11 +79,12 @@ cdef class Path:
         return PathIterator(self)
 
     cpdef draw(self, pen):
+        cdef PathVerb verb
         cdef tuple pts
         cdef bint closed = True
 
         for verb, pts in self:
-            method = getattr(pen, PEN_METHODS[verb.value])
+            method = getattr(pen, PEN_METHODS[verb])
             if verb is PathVerb.MOVE:
                 if not closed:
                     # skia contours starting with "moveTo" are implicitly
@@ -209,7 +209,7 @@ cdef class Path:
                 raise AssertionError(verb)
 
 
-class PathVerb(IntEnum):
+cpdef enum PathVerb:
     MOVE = kMove_Verb
     LINE = kLine_Verb
     QUAD = kQuad_Verb
