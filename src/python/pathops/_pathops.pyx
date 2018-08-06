@@ -130,7 +130,10 @@ cdef class Path:
         cdef PathIterator iterator = iter(self)
 
         for verb, pts in iterator:
-            method = getattr(pen, PEN_METHODS[verb])
+            try:
+                method = getattr(pen, PEN_METHODS[verb])
+            except KeyError:
+                raise UnsupportedVerbError(PathVerb(verb).name)
             if verb is PathVerb.MOVE:
                 if not closed:
                     # skia contours starting with "moveTo" are implicitly
