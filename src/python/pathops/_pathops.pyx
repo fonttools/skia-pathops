@@ -51,6 +51,12 @@ class FillType(IntEnum):
     INVERSE_EVEN_ODD = kInverseEvenOdd_FillType
 
 
+cdef Path new_path(SkPath skpath):
+    cdef Path p = Path()
+    p.path = SkPath(skpath)
+    return p
+
+
 cdef class Path:
 
     cdef SkPath path
@@ -168,9 +174,39 @@ cdef class Path:
 
     @property
     def contours(self):
-        cdef _ContourPathPen pen = _ContourPathPen()
-        self.draw(pen)
-        yield from pen.contours
+        cdef SkPath temp
+        temp.setFillType(self.path.getFillType())
+
+        cdef SkPath.Verb verb
+        cdef SkPoint p[4]
+        cdef SkPath.Iter iterator = SkPath.Iter(self.path, False)
+
+        while True:
+            verb = iterator.next(p, False)
+            if verb == kMove_Verb:
+                if not temp.isEmpty():
+                    yield new_path(temp)
+                    temp.rewind()
+                temp.moveTo(p[0])
+            elif verb == kLine_Verb:
+                temp.lineTo(p[1])
+            elif verb == kQuad_Verb:
+                temp.quadTo(p[1], p[2])
+            elif verb == kConic_Verb:
+                temp.conicTo(p[1], p[2], iterator.conicWeight())
+            elif verb == kCubic_Verb:
+                temp.cubicTo(p[1], p[2], p[3])
+            elif verb == kClose_Verb:
+                temp.close()
+                yield new_path(temp)
+                temp.rewind()
+            elif verb == kDone_Verb:
+                if not temp.isEmpty():
+                    yield new_path(temp)
+                    temp.reset()
+                break
+            else:
+                raise AssertionError(verb)
 
 
 class PathVerb(IntEnum):
@@ -286,43 +322,6 @@ cdef class PathPen:
     cpdef endPath(self):
         if not self.allow_open_paths:
             raise OpenPathError()
-
-    cpdef addComponent(self, glyphName, transformation):
-        pass
-
-
-cdef class _ContourPathPen:
-
-    cdef public list contours
-    cdef PathPen pen
-
-    def __init__(self):
-        self.contours = []
-        self.pen = None
-
-    cpdef moveTo(self, tuple pt):
-        assert self.pen is None
-        cdef Path path = Path()
-        self.contours.append(path)
-        self.pen = path.getPen()
-        self.pen.moveTo(pt)
-
-    cpdef lineTo(self, tuple pt):
-        self.pen.lineTo(pt)
-
-    cpdef curveTo(self, tuple pt1, tuple pt2, tuple pt3):
-        self.pen.curveTo( pt1, pt2, pt3)
-
-    def qCurveTo(self, *points):
-        self.pen.qCurveTo(*points)
-
-    cpdef closePath(self):
-        self.pen.closePath()
-        self.pen = None
-
-    cpdef endPath(self):
-        self.pen.endPath()
-        self.pen = None
 
     cpdef addComponent(self, glyphName, transformation):
         pass
