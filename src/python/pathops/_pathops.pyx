@@ -56,7 +56,9 @@ cdef class Path:
     cdef SkPath path
     cdef PathPen pen
 
-    def __init__(self, other=None):
+    def __init__(self, other=None, fillType=None):
+        if fillType is not None:
+            self.fillType = fillType
         if other is None:
             return
         if not isinstance(other, Path):
