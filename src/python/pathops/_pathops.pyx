@@ -136,13 +136,12 @@ cdef class Path:
                     # skia contours starting with "moveTo" are implicitly
                     # open, unless they end with a "close" verb
                     pen.endPath()
-                method(*pts)
                 closed = False
             elif verb is PathVerb.CLOSE:
-                method()
                 closed = True
-            else:
-                method(*pts)
+            # TODO: join quadratic curve segments using TrueType implied
+            # on-curve points, reversing the `decompose_quadratic_segment`
+            method(*pts)
 
         if not closed:
             pen.endPath()
