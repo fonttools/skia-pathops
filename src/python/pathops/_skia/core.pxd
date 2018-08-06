@@ -20,22 +20,31 @@ cdef extern from "SkPath.h":
         SkPath(SkPath& path) except +
 
         void moveTo(SkScalar x, SkScalar y)
+        void moveTo(const SkPoint& p)
 
         void lineTo(SkScalar x, SkScalar y)
+        void lineTo(const SkPoint& p)
 
         void cubicTo(
             SkScalar x1, SkScalar y1,
             SkScalar x2, SkScalar y2,
             SkScalar x3, SkScalar y3)
+        void cubicTo(const SkPoint& p1, const SkPoint& p2, const SkPoint& p3)
 
         void quadTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2)
+        void quadTo(const SkPoint& p1, const SkPoint& p2)
 
         void conicTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2,
                      SkScalar w)
+        void conicTo(const SkPoint& p1, const SkPoint& p2, SkScalar w)
 
         void close()
 
         void dump()
+
+        void reset()
+
+        void rewind()
 
         void setFillType(FillType ft)
         FillType getFillType()
@@ -56,6 +65,8 @@ cdef extern from "SkPath.h":
         int getPoints(SkPoint points[], int maximum)
 
         int countVerbs()
+
+        bint isEmpty()
 
         int getVerbs(uint8_t verbs[], int maximum)
 
