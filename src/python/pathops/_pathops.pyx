@@ -66,51 +66,27 @@ cdef class Path:
     cpdef PathPen getPen(self, bint allow_open_paths=True):
         return PathPen(self, allow_open_paths=allow_open_paths)
 
+    def __iter__(self):
+        return PathIterator(self)
+
     cpdef draw(self, pen):
-        cdef SkPoint p[4]
-        cdef SkPath.Verb verb
-        cdef SkPath.Iter iterator = SkPath.Iter(self.path, False)
-        cdef bint closed = False
+        cdef tuple pts
+        cdef bint closed = True
 
-        verb = iterator.next(p, False)
-        if verb == kDone_Verb:
-            return  # empty path
-        assert verb == kMove_Verb
-        pen.moveTo((p[0].x(), p[0].y()))
-
-        verb = iterator.next(p, False)
-        while verb != kDone_Verb:
-
-            if verb == kMove_Verb:
+        for verb, pts in self:
+            method = getattr(pen, PEN_METHODS[verb.value])
+            if verb is PathVerb.MOVE:
                 if not closed:
                     # skia contours starting with "moveTo" are implicitly
                     # open, unless they end with a "close" verb
                     pen.endPath()
-                pen.moveTo((p[0].x(), p[0].y()))
+                method(*pts)
                 closed = False
-
-            elif verb == kLine_Verb:
-                pen.lineTo((p[1].x(), p[1].y()))
-
-            elif verb == kCubic_Verb:
-                pen.curveTo(
-                    (p[1].x(), p[1].y()),
-                    (p[2].x(), p[2].y()),
-                    (p[3].x(), p[3].y()))
-
-            elif verb == kQuad_Verb:
-                pen.qCurveTo(
-                    (p[1].x(), p[1].y()),
-                    (p[2].x(), p[2].y()))
-
-            elif verb == kConic_Verb:
-                raise UnsupportedVerbError("conicTo")
-
-            elif verb == kClose_Verb:
-                pen.closePath()
+            elif verb is PathVerb.CLOSE:
+                method()
                 closed = True
-
-            verb = iterator.next(p, False)
+            else:
+                method(*pts)
 
         if not closed:
             pen.endPath()
@@ -157,6 +133,77 @@ cdef class Path:
         cdef _ContourPathPen pen = _ContourPathPen()
         self.draw(pen)
         yield from pen.contours
+
+
+class PathVerb(IntEnum):
+    MOVE = kMove_Verb
+    LINE = kLine_Verb
+    QUAD = kQuad_Verb
+    CONIC = kConic_Verb  # unsupported
+    CUBIC = kCubic_Verb
+    CLOSE = kClose_Verb
+    DONE = kDone_Verb  # unused; we raise StopIteration instead
+
+
+cdef dict PEN_METHODS = {
+    kMove_Verb: "moveTo",
+    kLine_Verb: "lineTo",
+    kQuad_Verb: "qCurveTo",
+    kCubic_Verb: "curveTo",
+    kClose_Verb: "closePath",
+}
+
+
+cdef class PathIterator:
+
+    cdef Path path
+    cdef SkPath.Iter iterator
+    cdef bint doConsumeDegenerates
+    cdef bint exact
+
+    def __cinit__(
+        self,
+        Path path,
+        bint forceClose=False,
+        bint doConsumeDegenerates=False,
+        bint exact=False,
+    ):
+        self.path = path
+        self.iterator = SkPath.Iter(self.path.path, forceClose)
+        self.doConsumeDegenerates = doConsumeDegenerates
+        self.exact = exact
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        cdef tuple pts
+        cdef SkPath.Verb verb
+        cdef SkPoint p[4]
+
+        verb = self.iterator.next(p, self.doConsumeDegenerates, self.exact)
+
+        if verb == kMove_Verb:
+            pts = ((p[0].x(), p[0].y()),)
+        elif verb == kLine_Verb:
+            pts = ((p[1].x(), p[1].y()),)
+        elif verb == kQuad_Verb:
+            pts = ((p[1].x(), p[1].y()),
+                   (p[2].x(), p[2].y()))
+        elif verb == kConic_Verb:
+            raise UnsupportedVerbError("conicTo")
+        elif verb == kCubic_Verb:
+            pts = ((p[1].x(), p[1].y()),
+                   (p[2].x(), p[2].y()),
+                   (p[3].x(), p[3].y()))
+        elif verb == kClose_Verb:
+            pts = ()
+        elif verb == kDone_Verb:
+            raise StopIteration()
+        else:
+            raise UnsupportedVerbError(verb)
+
+        return (PathVerb(verb), pts)
 
 
 cdef class PathPen:
