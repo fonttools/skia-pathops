@@ -78,6 +78,51 @@ cdef class Path:
     def __iter__(self):
         return PathIterator(self)
 
+    cpdef void moveTo(self, SkScalar x, SkScalar y):
+        self.path.moveTo(x, y)
+
+    cpdef void lineTo(self, SkScalar x, SkScalar y):
+        self.path.lineTo(x, y)
+
+    cpdef void quadTo(
+        self,
+        SkScalar x1,
+        SkScalar y1,
+        SkScalar x2,
+        SkScalar y2
+    ):
+        self.path.quadTo(x1, y1, x2, y2)
+
+    cpdef void conicTo(
+        self,
+        SkScalar x1,
+        SkScalar y1,
+        SkScalar x2,
+        SkScalar y2,
+        SkScalar w
+    ):
+        self.path.conicTo(x1, y2, x2, y2, w)
+
+    cpdef void cubicTo(
+        self,
+        SkScalar x1,
+        SkScalar y1,
+        SkScalar x2,
+        SkScalar y2,
+        SkScalar x3,
+        SkScalar y3,
+    ):
+        self.path.cubicTo(x1, y1, x2, y2, x3, y3)
+
+    cpdef void close(self):
+        self.path.close()
+
+    cpdef void reset(self):
+        self.path.reset()
+
+    cpdef void rewind(self):
+        self.path.rewind()
+
     cpdef draw(self, pen):
         cdef PathVerb verb
         cdef tuple pts
@@ -285,26 +330,21 @@ cdef class PathIterator:
 cdef class PathPen:
 
     cdef Path path
-    cdef SkPath *path_ptr
     cdef bint allow_open_paths
 
     def __cinit__(self, Path path, bint allow_open_paths=True):
-        # need to keep a reference to the parent Path object in case it's
-        # garbage-collected before us and later we attempt to deref the
-        # pointer to the wrapped SkPath instance
         self.path = path
-        self.path_ptr = &path.path
         self.allow_open_paths = allow_open_paths
 
     cpdef moveTo(self, pt):
-        self.path_ptr.moveTo(pt[0], pt[1])
+        self.path.moveTo(pt[0], pt[1])
 
     cpdef lineTo(self, pt):
-        self.path_ptr.lineTo(pt[0], pt[1])
+        self.path.lineTo(pt[0], pt[1])
 
     cpdef curveTo(self, pt1, pt2, pt3):
         # support BasePen "super-beziers"? Nah.
-        self.path_ptr.cubicTo(
+        self.path.cubicTo(
             pt1[0], pt1[1],
             pt2[0], pt2[1],
             pt3[0], pt3[1])
@@ -314,10 +354,10 @@ cdef class PathPen:
             self._qCurveToOne(pt1, pt2)
 
     cdef _qCurveToOne(self, pt1, pt2):
-        self.path_ptr.quadTo(pt1[0], pt1[1], pt2[0], pt2[1])
+        self.path.quadTo(pt1[0], pt1[1], pt2[0], pt2[1])
 
     cpdef closePath(self):
-        self.path_ptr.close()
+        self.path.close()
 
     cpdef endPath(self):
         if not self.allow_open_paths:
