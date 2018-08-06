@@ -84,6 +84,17 @@ cdef extern from "SkPath.h":
 
             SkScalar conicWeight()
 
+        cppclass RawIter:
+
+            RawIter() except +
+            RawIter(const SkPath& path) except +
+
+            Verb next(SkPoint pts[4])
+
+            Verb peek()
+
+            SkScalar conicWeight()
+
 
 cdef extern from * namespace "SkPath":
 

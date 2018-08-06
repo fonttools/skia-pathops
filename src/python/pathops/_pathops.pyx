@@ -127,8 +127,9 @@ cdef class Path:
         cdef PathVerb verb
         cdef tuple pts
         cdef bint closed = True
+        cdef PathIterator iterator = iter(self)
 
-        for verb, pts in self:
+        for verb, pts in iterator:
             method = getattr(pen, PEN_METHODS[verb])
             if verb is PathVerb.MOVE:
                 if not closed:
@@ -224,10 +225,10 @@ cdef class Path:
 
         cdef SkPath.Verb verb
         cdef SkPoint p[4]
-        cdef SkPath.Iter iterator = SkPath.Iter(self.path, False)
+        cdef SkPath.RawIter iterator = SkPath.RawIter(self.path)
 
         while True:
-            verb = iterator.next(p, False)
+            verb = iterator.next(p)
             if verb == kMove_Verb:
                 if not temp.isEmpty():
                     yield new_path(temp)
@@ -276,21 +277,11 @@ cdef dict PEN_METHODS = {
 cdef class PathIterator:
 
     cdef Path path
-    cdef SkPath.Iter iterator
-    cdef bint doConsumeDegenerates
-    cdef bint exact
+    cdef SkPath.RawIter iterator
 
-    def __cinit__(
-        self,
-        Path path,
-        bint forceClose=False,
-        bint doConsumeDegenerates=False,
-        bint exact=False,
-    ):
+    def __cinit__(self, Path path):
         self.path = path
-        self.iterator = SkPath.Iter(self.path.path, forceClose)
-        self.doConsumeDegenerates = doConsumeDegenerates
-        self.exact = exact
+        self.iterator = SkPath.RawIter(self.path.path)
 
     def __iter__(self):
         return self
@@ -300,7 +291,7 @@ cdef class PathIterator:
         cdef SkPath.Verb verb
         cdef SkPoint p[4]
 
-        verb = self.iterator.next(p, self.doConsumeDegenerates, self.exact)
+        verb = self.iterator.next(p)
 
         if verb == kMove_Verb:
             pts = ((p[0].x(), p[0].y()),)
@@ -325,6 +316,9 @@ cdef class PathIterator:
             raise UnsupportedVerbError(verb)
 
         return (PathVerb(verb), pts)
+
+    cpdef PathVerb peek(self):
+        return PathVerb(self.iterator.peek())
 
 
 cdef class PathPen:
