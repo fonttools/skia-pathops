@@ -31,6 +31,8 @@ from .errors import (
     UnsupportedVerbError,
     OpenPathError,
 )
+from libc.stdint cimport uint8_t
+from libc.stdlib cimport malloc, free
 from enum import IntEnum
 
 
@@ -127,6 +129,40 @@ cdef class Path:
     cpdef fix_winding(self):
         if not SkOpBuilder.FixWinding(&self.path):
             raise PathOpsError("failed to fix winding direction")
+
+    cdef list getVerbs(self):
+        cdef int i, count
+        cdef uint8_t *verbs
+        count = self.path.countVerbs()
+        verbs = <uint8_t *> malloc(count)
+        if not verbs:
+            raise MemoryError()
+        try:
+            assert self.path.getVerbs(verbs, count) == count
+            return [PathVerb(verbs[i]) for i in range(count)]
+        finally:
+            free(verbs)
+
+    @property
+    def verbs(self):
+        return self.getVerbs()
+
+    cdef list getPoints(self):
+        cdef int i, count
+        cdef SkPoint *pts
+        count = self.path.countPoints()
+        pts = <SkPoint *> malloc(count * sizeof(SkPoint))
+        if not pts:
+            raise MemoryError()
+        try:
+            assert self.path.getPoints(pts, count) == count
+            return [(pts[i].x(), pts[i].y()) for i in range(count)]
+        finally:
+            free(pts)
+
+    @property
+    def points(self):
+        return self.getPoints()
 
     @property
     def contours(self):

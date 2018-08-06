@@ -1,3 +1,6 @@
+from libc.stdint cimport uint8_t
+
+
 ctypedef float SkScalar
 
 
@@ -45,6 +48,16 @@ cdef extern from "SkPath.h":
         bint contains(SkScalar x, SkScalar y)
 
         const SkRect& getBounds()
+
+        int countPoints()
+
+        SkPoint getPoint(int index)
+
+        int getPoints(SkPoint points[], int maximum)
+
+        int countVerbs()
+
+        int getVerbs(uint8_t verbs[], int maximum)
 
         cppclass Iter:
 
