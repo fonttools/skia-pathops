@@ -229,7 +229,9 @@ cdef class PathIterator:
             pts = ((p[1].x(), p[1].y()),
                    (p[2].x(), p[2].y()))
         elif verb == kConic_Verb:
-            raise UnsupportedVerbError("conicTo")
+            pts = ((p[1].x(), p[1].y()),
+                   (p[2].x(), p[2].y()),
+                   self.iterator.conicWeight())
         elif verb == kCubic_Verb:
             pts = ((p[1].x(), p[1].y()),
                    (p[2].x(), p[2].y()),
