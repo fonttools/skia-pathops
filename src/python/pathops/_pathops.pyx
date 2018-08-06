@@ -63,10 +63,10 @@ cdef class Path:
         cdef Path static_path = other
         self.path = SkPath(static_path.path)
 
-    def getPen(self, allow_open_paths=True):
+    cpdef PathPen getPen(self, bint allow_open_paths=True):
         return PathPen(self, allow_open_paths=allow_open_paths)
 
-    def draw(self, pen):
+    cpdef draw(self, pen):
         cdef SkPoint p[4]
         cdef SkPath.Verb verb
         cdef SkPath.Iter iterator = SkPath.Iter(self.path, False)
@@ -119,7 +119,7 @@ cdef class Path:
         # prints a text repesentation of SkPath to stdout
         self.path.dump()
 
-    def addPath(self, Path path):
+    cpdef addPath(self, Path path):
         self.path.addPath(path.path)
 
     @property
@@ -154,7 +154,7 @@ cdef class Path:
 
     @property
     def contours(self):
-        pen = IterContourPen()
+        cdef _ContourPathPen pen = _ContourPathPen()
         self.draw(pen)
         yield from pen.contours
 
@@ -204,7 +204,7 @@ cdef class PathPen:
         pass
 
 
-cdef class IterContourPen:
+cdef class _ContourPathPen:
 
     cdef public list contours
     cdef PathPen pen
@@ -213,17 +213,17 @@ cdef class IterContourPen:
         self.contours = []
         self.pen = None
 
-    def moveTo(self, pt):
+    cpdef moveTo(self, tuple pt):
         assert self.pen is None
-        path = Path()
+        cdef Path path = Path()
         self.contours.append(path)
         self.pen = path.getPen()
         self.pen.moveTo(pt)
 
-    cpdef lineTo(self, pt):
+    cpdef lineTo(self, tuple pt):
         self.pen.lineTo(pt)
 
-    cpdef curveTo(self, pt1, pt2, pt3):
+    cpdef curveTo(self, tuple pt1, tuple pt2, tuple pt3):
         self.pen.curveTo( pt1, pt2, pt3)
 
     def qCurveTo(self, *points):
