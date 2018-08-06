@@ -75,10 +75,8 @@ class PathTest(object):
             ('moveTo', ((0.0, 0.0),)),
             ('qCurveTo', ((1.0, 1.0), (1.5, 1.5))),
             ('qCurveTo', ((2.0, 2.0), (3.0, 3.0))),
-            ('lineTo', ((0.0, 0.0),)),
             ('closePath', ())]
 
-    @pytest.mark.xfail(strict=True)
     def test_last_implicit_lineTo(self):
         # https://github.com/fonttools/skia-pathops/issues/6
         rec = RecordingPen()
@@ -158,6 +156,5 @@ class OpBuilderTest(object):
             ('lineTo', ((7425.0, -225.0),)),
             ('lineTo', ((7425.0, 7425.0),)),
             ('lineTo', ((5688.0, 7425.0),)),
-            ('lineTo', ((-225.0, 7425.0),)),
             ('closePath', ())]
 
