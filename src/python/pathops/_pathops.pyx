@@ -32,6 +32,8 @@ from .errors import (
     OpenPathError,
 )
 from libc.stdint cimport uint8_t
+from libc.float cimport FLT_EPSILON
+from libc.math cimport fabs
 from libc.stdlib cimport malloc, free
 
 
@@ -147,6 +149,7 @@ cdef class Path:
     cpdef draw(self, pen):
         cdef PathVerb verb
         cdef tuple pts
+        cdef list quads
         cdef bint closed = True
         cdef PathIterator iterator = iter(self)
 
@@ -155,6 +158,7 @@ cdef class Path:
                 method = getattr(pen, PEN_METHODS[verb])
             except KeyError:
                 raise UnsupportedVerbError(PathVerb(verb).name)
+
             if verb is PathVerb.MOVE:
                 if not closed:
                     # skia contours starting with "moveTo" are implicitly
@@ -163,8 +167,17 @@ cdef class Path:
                 closed = False
             elif verb is PathVerb.CLOSE:
                 closed = True
-            # TODO: join quadratic curve segments using TrueType implied
-            # on-curve points, reversing the `decompose_quadratic_segment`
+            elif verb is PathVerb.QUAD:
+                # try concatenating multiple quadratics with implied oncurves
+                if iterator.peek() is PathVerb.QUAD:
+                    quads = [pts]
+                    while iterator.peek() is PathVerb.QUAD:
+                        quads.append(next(iterator)[1])
+                    quads = join_quadratic_segments(quads)
+                    for pts in quads:
+                        method(*pts)
+                    continue
+
             method(*pts)
 
         if not closed:
@@ -481,6 +494,37 @@ cdef list decompose_quadratic_segment(tuple points):
         quad_segments.append((points[i], implied_pt))
     quad_segments.append((points[-2], points[-1]))
     return quad_segments
+
+
+cdef double ROUGH_EPSILON = FLT_EPSILON * 64
+
+
+cdef bint almost_equal(SkScalar v1, SkScalar v2):
+    return fabs(v1 - v2) < ROUGH_EPSILON
+
+
+cdef list join_quadratic_segments(list quad_segments):
+    cdef:
+        int i
+        list new_segments, points
+        SkScalar off1x, off1y, onx, ony, off2x, off2y
+
+    new_segments = []
+    points = []
+    for i in range(len(quad_segments) - 1):
+        (off1x, off1y), (onx, ony) = quad_segments[i]
+        (off2x, off2y), _ = quad_segments[i + 1]
+        points.append((off1x, off1y))
+        # skip oncurve if equal to midpoint between two consecutive offcurves
+        if not (
+            almost_equal(onx, (off1x + off2x) / 2)
+            and almost_equal(ony, (off1y + off2y) / 2)
+        ):
+            points.append((onx, ony))
+            new_segments.append(tuple(points))
+            points.clear()
+    new_segments.append(tuple(points) + quad_segments[-1])
+    return new_segments
 
 
 cpdef Path op(Path one, Path two, SkPathOp operator, fix_winding=True):
