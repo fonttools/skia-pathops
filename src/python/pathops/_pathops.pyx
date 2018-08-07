@@ -210,6 +210,10 @@ cdef class Path:
         cdef SkRect r = self.path.getBounds()
         return (r.left(), r.top(), r.right(), r.bottom())
 
+    @property
+    def area(self):
+        return get_path_area(self.path)
+
     cpdef simplify(self, fix_winding=True):
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
@@ -395,6 +399,62 @@ cdef class PathPen:
 
     cpdef addComponent(self, glyphName, transformation):
         pass
+
+
+cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
+    # Adapted from fontTools/pens/areaPen.py
+    cdef double value = .0
+    cdef SkPath.Verb verb
+    cdef SkPoint p[4]
+    cdef SkPoint p0, start_point
+    cdef SkScalar x0, y0, x1, y1, x2, y2, x3, y3
+    # here we pass forceClose=True for simplicity. Make it optional?
+    cdef SkPath.Iter iterator = SkPath.Iter(path, True)
+
+    p0 = start_point = SkPoint.Make(.0, .0)
+    while True:
+        verb = iterator.next(p)
+        if verb == kMove_Verb:
+            p0 = start_point = p[0]
+        elif verb == kLine_Verb:
+            x0, y0 = p0.x(), p0.y()
+            x1, y1 = p[1].x(), p[1].y()
+            value -= (x1 - x0) * (y1 + y0) * .5
+            p0 = p[1]
+        elif verb == kQuad_Verb:
+            # https://github.com/Pomax/bezierinfo/issues/44
+            x0, y0 = p0.x(), p0.y()
+            x1, y1 = p[1].x() - x0, p[1].y() - y0
+            x2, y2 = p[2].x() - x0, p[2].y() - y0
+            value -= (x2 * y1 - x1 * y2) / 3
+            value -= (p[2].x() - x0) * (p[2].y() + y0) * .5
+            p0 = p[2]
+        elif verb == kConic_Verb:
+            raise UnsupportedVerbError("CONIC")
+        elif verb == kCubic_Verb:
+            # https://github.com/Pomax/bezierinfo/issues/44
+            x0, y0 = p0.x(), p0.y()
+            x1, y1 = p[1].x() - x0, p[1].y() - y0
+            x2, y2 = p[2].x() - x0, p[2].y() - y0
+            x3, y3 = p[3].x() - x0, p[3].y() - y0
+            value -= (
+                       x1 * (   -   y2 -   y3) +
+                       x2 * (y1        - 2*y3) +
+                       x3 * (y1 + 2*y2       )
+                     ) * 0.15
+            value -= (p[3].x() - x0) * (p[3].y() + y0) * .5
+            p0 = p[3]
+        elif verb == kClose_Verb:
+            x0, y0 = p0.x(), p0.y()
+            x1, y1 = start_point.x(), start_point.y()
+            value -= (x1 - x0) * (y1 + y0) * .5
+            p0 = start_point = SkPoint.Make(.0, .0)
+        elif verb == kDone_Verb:
+            break
+        else:
+            raise AssertionError(verb)
+
+    return value
 
 
 cpdef Path reverse_contour(Path path):
