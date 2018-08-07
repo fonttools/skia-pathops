@@ -1,5 +1,5 @@
 from pathops import (
-    Path, PathPen, OpenPathError, OpBuilder, PathOp,
+    Path, PathPen, OpenPathError, OpBuilder, PathOp, PathVerb
 )
 from pathops._pathops import reverse_contour
 from fontTools.pens.recordingPen import RecordingPen
@@ -64,18 +64,29 @@ class PathTest(object):
         with pytest.raises(OpenPathError):
             pen.endPath()
 
-    def test_decompose_quadratic_segments(self):
+    def test_decompose_join_quadratic_segments(self):
         rec = RecordingPen()
         path = Path()
         pen = path.getPen()
         pen.moveTo((0, 0))
         pen.qCurveTo((1, 1), (2, 2), (3, 3))
         pen.closePath()
+
+        items = list(path)
+        assert len(items) == 4
+        # the TrueType quadratic spline with N off-curves is stored internally
+        # as N atomic quadratic Bezier segments
+        assert items[1][0] == PathVerb.QUAD
+        assert items[1][1] == ((1.0, 1.0), (1.5, 1.5))
+        assert items[2][0] == PathVerb.QUAD
+        assert items[2][1] == ((2.0, 2.0), (3.0, 3.0))
+
         path.draw(rec)
+
+        # when drawn back onto a SegmentPen, the implicit on-curves are omitted
         assert rec.value == [
             ('moveTo', ((0.0, 0.0),)),
-            ('qCurveTo', ((1.0, 1.0), (1.5, 1.5))),
-            ('qCurveTo', ((2.0, 2.0), (3.0, 3.0))),
+            ('qCurveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
             ('closePath', ())]
 
     def test_last_implicit_lineTo(self):
@@ -269,13 +280,13 @@ TEST_DATA = [
     (
         [
             ('moveTo', ((0, 0),)),
-            ('qCurveTo', ((1, 1), (2, 2))),
+            ('qCurveTo', ((1, 1), (2.5, 2.5))),
             ('qCurveTo', ((3, 3), (0, 0))),
             ('closePath', ()),
         ],
         [
             ('moveTo', ((0, 0),)),
-            ('qCurveTo', ((3, 3), (2, 2))),
+            ('qCurveTo', ((3, 3), (2.5, 2.5))),
             ('qCurveTo', ((1, 1), (0, 0))),
             ('closePath', ()),
         ]
@@ -283,14 +294,14 @@ TEST_DATA = [
     (
         [
             ('moveTo', ((0, 0),)),
-            ('qCurveTo', ((1, 1), (2, 2))),
+            ('qCurveTo', ((1, 1), (2.5, 2.5))),
             ('qCurveTo', ((3, 3), (4, 4))),
             ('closePath', ()),
         ],
         [
             ('moveTo', ((0, 0),)),
             ('lineTo', ((4, 4),)),
-            ('qCurveTo', ((3, 3), (2, 2))),
+            ('qCurveTo', ((3, 3), (2.5, 2.5))),
             ('qCurveTo', ((1, 1), (0, 0))),
             ('closePath', ()),
         ]
