@@ -582,7 +582,7 @@ cdef list join_quadratic_segments(list quad_segments):
         ):
             points.append((onx, ony))
             new_segments.append(tuple(points))
-            points.clear()
+            del points[:]
     new_segments.append(tuple(points) + quad_segments[-1])
     return new_segments
 
