@@ -78,6 +78,27 @@ cdef class Path:
     def __iter__(self):
         return PathIterator(self)
 
+    cpdef bint add(self, PathVerb verb, tuple pts) except False:
+        if verb is PathVerb.MOVE:
+            self.path.moveTo(pts[0][0], pts[0][1])
+        elif verb is PathVerb.LINE:
+            self.path.lineTo(pts[0][0], pts[0][1])
+        elif verb is PathVerb.QUAD:
+            self.path.quadTo(pts[0][0], pts[0][1],
+                             pts[1][0], pts[1][1])
+        elif verb is PathVerb.CONIC:
+            self.path.conicTo(pts[0][0], pts[0][1],
+                              pts[1][0], pts[1][1], pts[2])
+        elif verb is PathVerb.CUBIC:
+            self.path.cubicTo(pts[0][0], pts[0][1],
+                              pts[1][0], pts[1][1],
+                              pts[2][0], pts[2][1])
+        elif verb is PathVerb.CLOSE:
+            self.path.close()
+        else:
+            raise AssertionError(verb)
+        return True
+
     cpdef void moveTo(self, SkScalar x, SkScalar y):
         self.path.moveTo(x, y)
 
@@ -361,6 +382,88 @@ cdef class PathPen:
 
     cpdef addComponent(self, glyphName, transformation):
         pass
+
+
+cpdef Path reverse_contour(Path path):
+    cdef:
+        Path result
+        PathVerb firstType, secondType, lastType, v, curType
+        tuple firstPts, lastPts, firstOnCurve, lastOnCurve, secondPts
+        tuple curPts, nextPts
+        bint closed
+        int i, j
+        list contour, revPts
+
+    result = Path()
+    contour = list(path)
+    if not contour:
+        return result  # empty, nothing to reverse
+
+    firstType, firstPts = contour.pop(0)
+    assert firstType == PathVerb.MOVE
+    for i in range(1, len(contour)):
+        v = contour[i][0]
+        if v == PathVerb.MOVE:
+            raise ValueError("cannot reverse multiple-contour paths")
+        elif v == PathVerb.CONIC:
+            raise UnsupportedVerbError("CONIC")
+
+    if not contour:
+        closed = False
+    else:
+        closed = contour[-1][0] == PathVerb.CLOSE
+        if closed:
+            del contour[-1]
+
+    firstOnCurve = firstPts[-1]
+    if not contour:
+        # contour contains only one segment, nothing to reverse
+        result.add(firstType, firstPts)
+    else:
+        lastType, lastPts = contour[-1]
+        lastOnCurve = lastPts[-1]
+        if closed:
+            # for closed paths, we keep the starting point
+            result.add(firstType, firstPts)
+            if firstOnCurve != lastOnCurve:
+                # emit an implied line between the last and first points
+                result.add(PathVerb.LINE, (lastOnCurve,))
+                contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
+
+            if len(contour) > 1:
+                secondType, secondPts = contour[0]
+            else:
+                # contour has only two points, the second and last are the same
+                secondType, secondPts = lastType, lastPts
+            # if a lineTo follows the initial moveTo, after reversing it
+            # will be implied by the closePath, so we don't emit one;
+            # unless the lineTo and moveTo overlap, in which case we keep the
+            # duplicate points
+            if secondType == PathVerb.LINE and firstPts != secondPts:
+                del contour[0]
+                if contour:
+                    contour[-1] = (lastType, tuple(lastPts[:-1]) + secondPts)
+        else:
+            # for open paths, the last point will become the first
+            result.add(firstType, (lastOnCurve,))
+            contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
+
+        # we iterate over all segment pairs in reverse order, and add
+        # each one with the off-curve points reversed (if any), and
+        # with the on-curve point of the following segment
+        for i in range(len(contour)-1, -1, -1):
+            curType, curPts = contour[i]
+            nextPts = contour[i-1][1]
+            revPts = []
+            for j in range(len(curPts)-2, -1, -1):
+                revPts.append(curPts[j])
+            revPts.append(nextPts[-1])
+            result.add(curType, tuple(revPts))
+
+    if closed:
+        result.add(PathVerb.CLOSE, ())
+
+    return result
 
 
 cdef list decompose_quadratic_segment(tuple points):
