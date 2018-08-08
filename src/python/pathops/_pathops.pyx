@@ -54,7 +54,7 @@ cpdef enum FillType:
 
 cdef Path new_path(SkPath skpath):
     cdef Path p = Path()
-    p.path = SkPath(skpath)
+    p.path = skpath
     return p
 
 
@@ -64,15 +64,15 @@ cdef class Path:
     cdef PathPen pen
 
     def __init__(self, other=None, fillType=None):
+        cdef Path static_path
+        if other is not None:
+            if isinstance(other, Path):
+                static_path = other
+                self.path = static_path.path
+            else:
+                other.draw(self.getPen())
         if fillType is not None:
             self.fillType = fillType
-        if other is None:
-            return
-        if not isinstance(other, Path):
-            other.draw(self.getPen())
-            return
-        cdef Path static_path = other
-        self.path = SkPath(static_path.path)
 
     cpdef PathPen getPen(self, bint allow_open_paths=True):
         return PathPen(self, allow_open_paths=allow_open_paths)
@@ -214,6 +214,15 @@ cdef class Path:
     def area(self):
         return get_path_area(self.path)
 
+    def reverse(self):
+        cdef Path contour
+        cdef SkPath skpath
+        skpath.setFillType(self.path.getFillType())
+        for contour in self.contours:
+            reverse_contour(contour)
+            skpath.addPath(contour.path)
+        self.path = skpath
+
     cpdef simplify(self, fix_winding=True):
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
@@ -261,7 +270,9 @@ cdef class Path:
     @property
     def contours(self):
         cdef SkPath temp
-        temp.setFillType(self.path.getFillType())
+        cdef SkPath.FillType fillType = self.path.getFillType()
+
+        temp.setFillType(fillType)
 
         cdef SkPath.Verb verb
         cdef SkPoint p[4]
@@ -273,6 +284,7 @@ cdef class Path:
                 if not temp.isEmpty():
                     yield new_path(temp)
                     temp.rewind()
+                    temp.setFillType(fillType)
                 temp.moveTo(p[0])
             elif verb == kLine_Verb:
                 temp.lineTo(p[1])
@@ -286,6 +298,7 @@ cdef class Path:
                 temp.close()
                 yield new_path(temp)
                 temp.rewind()
+                temp.setFillType(fillType)
             elif verb == kDone_Verb:
                 if not temp.isEmpty():
                     yield new_path(temp)
@@ -457,20 +470,23 @@ cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
     return value
 
 
-cpdef Path reverse_contour(Path path):
+cdef bint reverse_contour(Path path) except False:
     cdef:
-        Path result
         PathVerb firstType, secondType, lastType, v, curType
+        SkPath.FillType fillType
         tuple firstPts, lastPts, firstOnCurve, lastOnCurve, secondPts
         tuple curPts, nextPts
         bint closed
         int i, j
         list contour, revPts
 
-    result = Path()
     contour = list(path)
     if not contour:
-        return result  # empty, nothing to reverse
+        return True  # empty, nothing to reverse
+
+    fillType = path.path.getFillType()
+    path.path.rewind()
+    path.path.setFillType(fillType)
 
     firstType, firstPts = contour.pop(0)
     assert firstType == PathVerb.MOVE
@@ -491,16 +507,16 @@ cpdef Path reverse_contour(Path path):
     firstOnCurve = firstPts[-1]
     if not contour:
         # contour contains only one segment, nothing to reverse
-        result.add(firstType, firstPts)
+        path.add(firstType, firstPts)
     else:
         lastType, lastPts = contour[-1]
         lastOnCurve = lastPts[-1]
         if closed:
             # for closed paths, we keep the starting point
-            result.add(firstType, firstPts)
+            path.add(firstType, firstPts)
             if firstOnCurve != lastOnCurve:
                 # emit an implied line between the last and first points
-                result.add(PathVerb.LINE, (lastOnCurve,))
+                path.add(PathVerb.LINE, (lastOnCurve,))
                 contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
 
             if len(contour) > 1:
@@ -518,7 +534,7 @@ cpdef Path reverse_contour(Path path):
                     contour[-1] = (lastType, tuple(lastPts[:-1]) + secondPts)
         else:
             # for open paths, the last point will become the first
-            result.add(firstType, (lastOnCurve,))
+            path.add(firstType, (lastOnCurve,))
             contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
 
         # we iterate over all segment pairs in reverse order, and add
@@ -531,12 +547,12 @@ cpdef Path reverse_contour(Path path):
             for j in range(len(curPts)-2, -1, -1):
                 revPts.append(curPts[j])
             revPts.append(nextPts[-1])
-            result.add(curType, tuple(revPts))
+            path.add(curType, tuple(revPts))
 
     if closed:
-        result.add(PathVerb.CLOSE, ())
+        path.add(PathVerb.CLOSE, ())
 
-    return result
+    return True
 
 
 cdef list decompose_quadratic_segment(tuple points):

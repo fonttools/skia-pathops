@@ -1,7 +1,6 @@
 from pathops import (
     Path, PathPen, OpenPathError, OpBuilder, PathOp, PathVerb
 )
-from pathops._pathops import reverse_contour
 from fontTools.pens.recordingPen import RecordingPen
 
 import pytest
@@ -420,15 +419,15 @@ TEST_DATA = [
         ]
     )
 ]
-@pytest.mark.parametrize("contour, expected", TEST_DATA)
-def test_reverse_contour(contour, expected):
+@pytest.mark.parametrize("operations, expected", TEST_DATA)
+def test_reverse_path(operations, expected):
     path = Path()
     pen = path.getPen()
-    for operator, operands in contour:
+    for operator, operands in operations:
         getattr(pen, operator)(*operands)
 
-    revpath = reverse_contour(path)
+    path.reverse()
 
     recpen = RecordingPen()
-    revpath.draw(recpen)
+    path.draw(recpen)
     assert recpen.value == expected
