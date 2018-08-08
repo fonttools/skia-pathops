@@ -74,6 +74,7 @@ class custom_build_ext(build_ext):
             self.distribution.ext_modules[:] = cythonize(
                 self.distribution.ext_modules,
                 force=force,
+                annotate=os.environ.get("CYTHON_ANNOTATE", False),
                 quiet=not self.verbose,
                 compiler_directives={
                     "linetrace": linetrace,
