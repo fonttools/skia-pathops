@@ -58,6 +58,8 @@ cdef extern from "SkPath.h":
 
         const SkRect& getBounds()
 
+        SkRect computeTightBounds()
+
         int countPoints()
 
         SkPoint getPoint(int index)

@@ -207,6 +207,11 @@ cdef class Path:
 
     @property
     def bounds(self):
+        cdef SkRect r = self.path.computeTightBounds()
+        return (r.left(), r.top(), r.right(), r.bottom())
+
+    @property
+    def controlPointBounds(self):
         cdef SkRect r = self.path.getBounds()
         return (r.left(), r.top(), r.right(), r.bottom())
 
