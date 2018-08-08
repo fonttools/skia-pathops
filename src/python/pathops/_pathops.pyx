@@ -34,7 +34,9 @@ from .errors import (
 from libc.stdint cimport uint8_t
 from libc.float cimport FLT_EPSILON
 from libc.math cimport fabs
-from libc.stdlib cimport malloc, free
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from libc.string cimport memset
+cimport cython
 
 
 cpdef enum PathOp:
@@ -228,7 +230,7 @@ cdef class Path:
         if self.clockwise != value:
             self.reverse()
 
-    def reverse(self):
+    cpdef reverse(self):
         cdef Path contour
         cdef SkPath skpath
         skpath.setFillType(self.path.getFillType())
@@ -237,28 +239,24 @@ cdef class Path:
             skpath.addPath(contour.path)
         self.path = skpath
 
-    cpdef simplify(self, fix_winding=True):
+    cpdef simplify(self, bint fix_winding=True):
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
         if fix_winding:
-            self.fix_winding()
-
-    cpdef fix_winding(self):
-        if not SkOpBuilder.FixWinding(&self.path):
-            raise PathOpsError("failed to fix winding direction")
+            winding_from_even_odd(self)
 
     cdef list getVerbs(self):
         cdef int i, count
         cdef uint8_t *verbs
         count = self.path.countVerbs()
-        verbs = <uint8_t *> malloc(count)
+        verbs = <uint8_t *> PyMem_Malloc(count)
         if not verbs:
             raise MemoryError()
         try:
             assert self.path.getVerbs(verbs, count) == count
             return [PathVerb(verbs[i]) for i in range(count)]
         finally:
-            free(verbs)
+            PyMem_Free(verbs)
 
     @property
     def verbs(self):
@@ -268,14 +266,14 @@ cdef class Path:
         cdef int i, count
         cdef SkPoint *pts
         count = self.path.countPoints()
-        pts = <SkPoint *> malloc(count * sizeof(SkPoint))
+        pts = <SkPoint *> PyMem_Malloc(count * sizeof(SkPoint))
         if not pts:
             raise MemoryError()
         try:
             assert self.path.getPoints(pts, count) == count
             return [(pts[i].x(), pts[i].y()) for i in range(count)]
         finally:
-            free(pts)
+            PyMem_Free(pts)
 
     @property
     def points(self):
@@ -440,7 +438,7 @@ cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
 
     p0 = start_point = SkPoint.Make(.0, .0)
     while True:
-        verb = iterator.next(p)
+        verb = iterator.next(p, False)
         if verb == kMove_Verb:
             p0 = start_point = p[0]
         elif verb == kLine_Verb:
@@ -569,6 +567,125 @@ cdef bint reverse_contour(Path path) except False:
     return True
 
 
+# NOTE This is meant to be used only on simplified paths (i.e. without
+# overlapping contours), like the ones returned from Skia's path operations.
+# It only tests the bounding boxes and the on-curve points.
+cdef int path_is_inside(const SkPath& self, const SkPath& other) except -1:
+    cdef SkRect r1, r2
+    cdef SkPath.RawIter iterator
+    cdef SkPath.Verb verb
+    cdef SkPoint[4] p
+    cdef SkPoint oncurve
+
+    r1 = self.computeTightBounds()
+    r2 = other.computeTightBounds()
+    if not SkRect.Intersects(r1, r2):
+        return 0
+
+    iterator = SkPath.RawIter(other)
+    while True:
+        verb = iterator.next(p)
+        if verb == kMove_Verb:
+            oncurve = p[0]
+        elif verb == kLine_Verb:
+            oncurve = p[1]
+        elif verb == kQuad_Verb:
+            oncurve = p[2]
+        elif verb == kConic_Verb:
+            raise UnsupportedVerbError("CONIC")
+        elif verb == kCubic_Verb:
+            oncurve = p[3]
+        elif verb == kClose_Verb:
+            continue
+        elif verb == kDone_Verb:
+            break
+        else:
+            raise AssertionError(verb)
+        if not self.contains(oncurve.x(), oncurve.y()):
+            return 0
+
+    return 1
+
+
+DEF DEBUG_WINDING = False
+
+
+@cython.wraparound(False)
+@cython.boundscheck(False)
+cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
+    """ Take a simplified path (without overlaps) and set the contours
+    directions according to the non-zero winding fill type.
+    The outermost contours are set to counter-clockwise direction, unless
+    'truetype' is True.
+    """
+    cdef int i, j
+    cdef bint inverse = not truetype
+    cdef bint is_clockwise, is_even
+    cdef Path contour, other
+
+    # sort contours by area, from largest to smallest
+    cdef dict contours_by_area = {}
+    cdef object area
+    for contour in path.contours:
+        area = -fabs(get_path_area(contour.path))
+        if area not in contours_by_area:
+            contours_by_area[area] = []
+        contours_by_area[area].append(contour)
+    cdef list group
+    cdef list contours = []
+    for _, group in sorted(contours_by_area.items()):
+        contours.extend(group)
+    cdef Py_ssize_t n = len(contours)
+
+    # XXX permature optimization? needs profile
+    cdef size_t* nested
+    nested = <size_t*>PyMem_Malloc(n * sizeof(size_t))
+    if not nested:
+        raise MemoryError()
+    memset(nested, 0, n * sizeof(size_t))
+    try:
+        # increment the nesting level when a contour is inside another
+        for i in range(n):
+            contour = contours[i]
+            for j in range(i + 1, n):
+                other = contours[j]
+                if path_is_inside(contour.path, other.path):
+                    nested[j] += 1
+
+        IF DEBUG_WINDING:
+            print("nested: ", end="")
+            for i in range(n):
+                print(nested[i], end=" ")
+            print("")
+
+        # reverse a contour when its winding and even-odd number disagree;
+        # for TrueType, set the outermost direction to clockwise
+        for i in range(n):
+            contour = contours[i]
+            is_clockwise = get_path_area(contour.path) < .0
+            is_even = not (nested[i] & 1)
+
+            IF DEBUG_WINDING:
+                print(
+                    "%d: inverse=%s is_clockwise=%s is_even=%s"
+                    % (i, inverse, is_clockwise, is_even)
+                )
+            if inverse ^ is_clockwise ^ is_even:
+                IF DEBUG_WINDING:
+                    print("reverse_contour %d" % i)
+                reverse_contour(contour)
+    finally:
+        PyMem_Free(nested)
+
+    path.path.rewind()
+    for i in range(n):
+        contour = contours[i]
+        path.path.addPath(contour.path)
+
+    path.path.setFillType(kWinding_FillType)
+    return True
+
+
 cdef list decompose_quadratic_segment(tuple points):
     cdef:
         int i, n = len(points) - 1
@@ -622,20 +739,26 @@ cpdef Path op(Path one, Path two, SkPathOp operator, fix_winding=True):
     if not Op(one.path, two.path, operator, &result.path):
         raise PathOpsError("operation did not succeed")
     if fix_winding:
-        result.fix_winding()
+        winding_from_even_odd(result)
     return result
 
 
-cpdef Path simplify(Path path):
+cpdef Path simplify(Path path, fix_winding=True):
     cdef Path result = Path()
     if Simplify(path.path, &result.path):
         return result
+    if fix_winding:
+        winding_from_even_odd(result)
     raise PathOpsError("operation did not succeed")
 
 
 cdef class OpBuilder:
 
     cdef SkOpBuilder builder
+    cdef bint fix_winding
+
+    def __init__(self, bint fix_winding=True):
+        self.fix_winding = fix_winding
 
     cpdef add(self, Path path, SkPathOp operator):
         self.builder.add(path.path, operator)
@@ -643,6 +766,8 @@ cdef class OpBuilder:
     cpdef Path resolve(self):
         cdef Path result = Path()
         if self.builder.resolve(&result.path):
+            if self.fix_winding:
+                winding_from_even_odd(result)
             return result
         raise PathOpsError("operation did not succeed")
 
