@@ -770,17 +770,3 @@ cdef class OpBuilder:
                 winding_from_even_odd(result)
             return result
         raise PathOpsError("operation did not succeed")
-
-
-cpdef Path fix_winding(Path path):
-    cdef Path copy = Path(path)
-    if not SkOpBuilder.FixWinding(&copy.path):
-        raise PathOpsError("failed to fix winding direction")
-    return copy
-
-
-cpdef bint bounds_intersect(Path self, Path other):
-    return SkRect.Intersects(
-        self.path.getBounds(),
-        other.path.getBounds(),
-    )

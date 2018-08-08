@@ -8,7 +8,6 @@ from ._pathops import (
     op,
     simplify,
     OpBuilder,
-    fix_winding,
 )
 
 from .errors import (
