@@ -217,7 +217,16 @@ cdef class Path:
 
     @property
     def area(self):
-        return get_path_area(self.path)
+        return fabs(get_path_area(self.path))
+
+    @property
+    def clockwise(self):
+        return get_path_area(self.path) < 0
+
+    @clockwise.setter
+    def clockwise(self, value):
+        if self.clockwise != value:
+            self.reverse()
 
     def reverse(self):
         cdef Path contour
