@@ -8,9 +8,6 @@ from ._pathops import (
     op,
     simplify,
     OpBuilder,
-)
-
-from .errors import (
     PathOpsError,
     UnsupportedVerbError,
     OpenPathError,

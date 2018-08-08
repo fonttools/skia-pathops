@@ -1,4 +1,4 @@
-from ._pathops import (
+from . import (
     Path,
     PathOp,
     op,

@@ -26,17 +26,24 @@ from ._skia.pathops cimport (
     kXOR_SkPathOp,
     kReverseDifference_SkPathOp,
 )
-from .errors import (
-    PathOpsError,
-    UnsupportedVerbError,
-    OpenPathError,
-)
 from libc.stdint cimport uint8_t
 from libc.float cimport FLT_EPSILON
 from libc.math cimport fabs
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset
 cimport cython
+
+
+cdef class PathOpsError(Exception):
+    pass
+
+
+cdef class UnsupportedVerbError(PathOpsError):
+    pass
+
+
+cdef class OpenPathError(PathOpsError):
+    pass
 
 
 cpdef enum PathOp:
