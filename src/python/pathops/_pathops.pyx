@@ -497,11 +497,10 @@ cdef uint8_t *POINTS_IN_VERB = [
     0,  # kClose
     0   # kDone
 ]
-cdef size_t POINTS_IN_VERB_SIZE = sizeof(POINTS_IN_VERB)  # 7
 
 
 cdef int pts_in_verb(unsigned v) except -1:
-    if v >= POINTS_IN_VERB_SIZE:
+    if v >= 7:  # constant length of POINTS_IN_VERB static array
         raise IndexError(v)
     return POINTS_IN_VERB[v]
 
