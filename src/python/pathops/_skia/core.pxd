@@ -72,6 +72,8 @@ cdef extern from "SkPath.h":
 
         int getVerbs(uint8_t verbs[], int maximum)
 
+        bint getLastPt(SkPoint* lastPt)
+
         cppclass Iter:
 
             Iter() except +

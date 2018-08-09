@@ -488,88 +488,102 @@ cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
     return value
 
 
+cdef uint8_t *POINTS_IN_VERB = [
+    1,  # kMove
+    1,  # kLine
+    2,  # kQuad
+    2,  # kConic
+    3,  # kCubic
+    0,  # kClose
+    0   # kDone
+]
+cdef size_t POINTS_IN_VERB_SIZE = sizeof(POINTS_IN_VERB)  # 7
+
+
+cdef int pts_in_verb(unsigned v) except -1:
+    if v >= POINTS_IN_VERB_SIZE:
+        raise IndexError(v)
+    return POINTS_IN_VERB[v]
+
+
+cdef class _VerbArray:
+
+    cdef uint8_t *data
+    cdef int count
+
+    def __cinit__(self, Path path):
+        self.count = path.path.countVerbs()
+        self.data = <uint8_t *> PyMem_Malloc(self.count)
+        if not self.data:
+            raise MemoryError()
+        path.path.getVerbs(self.data, self.count)
+
+    def __dealloc__(self):
+        PyMem_Free(self.data)  # no-op if data is NULL
+
+
+cdef class _SkPointArray:
+
+    cdef SkPoint *data
+    cdef int count
+
+    def __cinit__(self, Path path):
+        self.count = path.path.countPoints()
+        self.data = <SkPoint *> PyMem_Malloc(self.count * sizeof(SkPoint))
+        if not self.data:
+            raise MemoryError()
+        path.path.getPoints(self.data, self.count)
+
+    def __dealloc__(self):
+        PyMem_Free(self.data)  # no-op if data is NULL
+
+
 cdef bint reverse_contour(Path path) except False:
-    cdef:
-        PathVerb firstType, secondType, lastType, v, curType
-        SkPath.FillType fillType
-        tuple firstPts, lastPts, firstOnCurve, lastOnCurve, secondPts
-        tuple curPts, nextPts
-        bint closed
-        int i, j
-        list contour, revPts
+    cdef SkPath *skpath = &path.path
+    cdef SkPath temp
+    cdef SkPoint lastPt
 
-    contour = list(path)
-    if not contour:
-        return True  # empty, nothing to reverse
+    if not skpath.getLastPt(&lastPt):
+        return True  # ignore empty path
 
-    fillType = path.path.getFillType()
-    path.path.rewind()
-    path.path.setFillType(fillType)
+    cdef _VerbArray va = _VerbArray(path)
+    cdef uint8_t *verbsStart = va.data  # pointer to the first verb
+    cdef uint8_t *verbs = verbsStart + va.count - 1  # pointer to the last verb
 
-    firstType, firstPts = contour.pop(0)
-    assert firstType == PathVerb.MOVE
-    for i in range(1, len(contour)):
-        v = contour[i][0]
-        if v == PathVerb.MOVE:
-            raise ValueError("cannot reverse multiple-contour paths")
-        elif v == PathVerb.CONIC:
+    cdef _SkPointArray pa = _SkPointArray(path)
+    cdef SkPoint *pts = pa.data + pa.count - 1  # pointer to the last point
+
+    # the last point becomes the first
+    temp.moveTo(lastPt)
+
+    cdef uint8_t v
+    cdef bint closed = False
+    # loop over both arrays in reverse, break before the first verb
+    while verbs > verbsStart:
+        v = verbs[0]
+        verbs -= 1
+        pts -= pts_in_verb(v)
+        if v == kMove_Verb:
+            # if the path has multiple contours, stop after reversing the last
+            break
+        elif v == kLine_Verb:
+            temp.lineTo(pts[0])
+        elif v == kQuad_Verb:
+            temp.quadTo(pts[1], pts[0])
+        elif v == kConic_Verb:
             raise UnsupportedVerbError("CONIC")
-
-    if not contour:
-        closed = False
-    else:
-        closed = contour[-1][0] == PathVerb.CLOSE
-        if closed:
-            del contour[-1]
-
-    firstOnCurve = firstPts[-1]
-    if not contour:
-        # contour contains only one segment, nothing to reverse
-        path.add(firstType, firstPts)
-    else:
-        lastType, lastPts = contour[-1]
-        lastOnCurve = lastPts[-1]
-        if closed:
-            # for closed paths, we keep the starting point
-            path.add(firstType, firstPts)
-            if firstOnCurve != lastOnCurve:
-                # emit an implied line between the last and first points
-                path.add(PathVerb.LINE, (lastOnCurve,))
-                contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
-
-            if len(contour) > 1:
-                secondType, secondPts = contour[0]
-            else:
-                # contour has only two points, the second and last are the same
-                secondType, secondPts = lastType, lastPts
-            # if a lineTo follows the initial moveTo, after reversing it
-            # will be implied by the closePath, so we don't emit one;
-            # unless the lineTo and moveTo overlap, in which case we keep the
-            # duplicate points
-            if secondType == PathVerb.LINE and firstPts != secondPts:
-                del contour[0]
-                if contour:
-                    contour[-1] = (lastType, tuple(lastPts[:-1]) + secondPts)
+        elif v == kCubic_Verb:
+            temp.cubicTo(pts[2], pts[1], pts[0])
+        elif v == kClose_Verb:
+            closed = True
         else:
-            # for open paths, the last point will become the first
-            path.add(firstType, (lastOnCurve,))
-            contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
-
-        # we iterate over all segment pairs in reverse order, and add
-        # each one with the off-curve points reversed (if any), and
-        # with the on-curve point of the following segment
-        for i in range(len(contour)-1, -1, -1):
-            curType, curPts = contour[i]
-            nextPts = contour[i-1][1]
-            revPts = []
-            for j in range(len(curPts)-2, -1, -1):
-                revPts.append(curPts[j])
-            revPts.append(nextPts[-1])
-            path.add(curType, tuple(revPts))
+            raise AssertionError(v)
 
     if closed:
-        path.add(PathVerb.CLOSE, ())
+        temp.close()
 
+    temp.setFillType(skpath.getFillType())
+    skpath[0] = temp
     return True
 
 

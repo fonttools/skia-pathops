@@ -178,15 +178,15 @@ TEST_DATA = [
             ('moveTo', ((0, 0),)),
             ('lineTo', ((1, 1),)),
             ('lineTo', ((2, 2),)),
-            ('lineTo', ((3, 3),)),  # last not on move, line is implied
-            ('closePath', ()),
-        ],
-        [
-            ('moveTo', ((0, 0),)),
             ('lineTo', ((3, 3),)),
+            ('closePath', ()),
+        ],
+        [
+            ('moveTo', ((3, 3),)),
             ('lineTo', ((2, 2),)),
             ('lineTo', ((1, 1),)),
-            ('closePath', ()),
+            ('lineTo', ((0, 0),)),
+            ('closePath', ())
         ]
     ),
     (
@@ -194,14 +194,15 @@ TEST_DATA = [
             ('moveTo', ((0, 0),)),
             ('lineTo', ((1, 1),)),
             ('lineTo', ((2, 2),)),
-            ('lineTo', ((0, 0),)),  # last on move, no implied line
+            ('lineTo', ((0, 0),)),
             ('closePath', ()),
         ],
         [
             ('moveTo', ((0, 0),)),
             ('lineTo', ((2, 2),)),
             ('lineTo', ((1, 1),)),
-            ('closePath', ()),
+            ('lineTo', ((0, 0),)),
+            ('closePath', ())
         ]
     ),
     (
@@ -213,8 +214,7 @@ TEST_DATA = [
             ('closePath', ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((2, 2),)),
+            ('moveTo', ((2, 2),)),
             ('lineTo', ((1, 1),)),
             ('lineTo', ((0, 0),)),
             ('lineTo', ((0, 0),)),
@@ -228,8 +228,8 @@ TEST_DATA = [
             ('closePath', ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
+            ('moveTo', ((1, 1),)),
+            ('lineTo', ((0, 0),)),
             ('closePath', ()),
         ]
     ),
@@ -255,8 +255,7 @@ TEST_DATA = [
             ('closePath', ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((6, 6),)),  # implied line
+            ('moveTo', ((6, 6),)),
             ('curveTo', ((5, 5), (4, 4), (3, 3))),
             ('curveTo', ((2, 2), (1, 1), (0, 0))),
             ('closePath', ()),
@@ -265,16 +264,16 @@ TEST_DATA = [
     (
         [
             ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),  # this line becomes implied
+            ('lineTo', ((1, 1),)),
             ('curveTo', ((2, 2), (3, 3), (4, 4))),
             ('curveTo', ((5, 5), (6, 6), (7, 7))),
             ('closePath', ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((7, 7),)),
+            ('moveTo', ((7, 7),)),
             ('curveTo', ((6, 6), (5, 5), (4, 4))),
             ('curveTo', ((3, 3), (2, 2), (1, 1))),
+            ('lineTo', ((0, 0),)),
             ('closePath', ()),
         ]
     ),
@@ -300,8 +299,7 @@ TEST_DATA = [
             ('closePath', ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((4, 4),)),
+            ('moveTo', ((4, 4),)),
             ('qCurveTo', ((3, 3), (2.5, 2.5))),
             ('qCurveTo', ((1, 1), (0, 0))),
             ('closePath', ()),
@@ -315,9 +313,9 @@ TEST_DATA = [
             ('closePath', ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((3, 3),)),
+            ('moveTo', ((3, 3),)),
             ('qCurveTo', ((2, 2), (1, 1))),
+            ('lineTo', ((0, 0),)),
             ('closePath', ()),
         ]
     ),
