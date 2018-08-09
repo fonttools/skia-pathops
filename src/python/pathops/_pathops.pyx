@@ -70,7 +70,6 @@ cdef Path new_path(SkPath skpath):
 cdef class Path:
 
     cdef SkPath path
-    cdef PathPen pen
 
     def __init__(self, other=None, fillType=None):
         cdef Path static_path
