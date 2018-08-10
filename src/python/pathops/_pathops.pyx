@@ -32,6 +32,7 @@ from libc.math cimport fabs
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset
 cimport cython
+import itertools
 
 
 cdef class PathOpsError(Exception):
@@ -191,9 +192,23 @@ cdef class Path:
         if not closed:
             pen.endPath()
 
-    def dump(self):
-        # prints a text repesentation of SkPath to stdout
-        self.path.dump()
+    def dump(self, cpp=False):
+        # print a text repesentation to stdout
+        if cpp:
+            self.path.dump()  # C++
+        else:
+            print(self)  # Python
+
+    def __str__(self):
+        # return a text repesentation as Python code
+        if self.path.isEmpty():
+            return ""
+        s = ["path.fillType = %s" % self.fillType]
+        for verb, pts in self:
+            method = VERB_METHODS[verb]
+            args = ", ".join(map(str, itertools.chain(*pts)))
+            s.append("path.%s(%s)" % (method, args))
+        return "\n".join(s)
 
     cpdef addPath(self, Path path):
         self.path.addPath(path.path)
