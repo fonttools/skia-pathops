@@ -29,7 +29,7 @@ from ._skia.pathops cimport (
 from libc.stdint cimport uint8_t
 from libc.float cimport FLT_EPSILON
 from libc.math cimport fabs
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from libc.string cimport memset
 cimport cython
 import itertools
@@ -268,11 +268,16 @@ cdef class Path:
             skpath.addPath(contour.path)
         self.path = skpath
 
-    cpdef simplify(self, bint fix_winding=True):
+    cpdef simplify(self, bint fix_winding=True, keep_starting_points=True):
+        cdef list first_points
+        if keep_starting_points:
+            first_points = self.firstPoints
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
         if fix_winding:
             winding_from_even_odd(self)
+        if keep_starting_points:
+            restore_starting_points(self, first_points)
 
     cdef list getVerbs(self):
         cdef int i, count
@@ -326,6 +331,47 @@ cdef class Path:
             return n
         finally:
             PyMem_Free(verbs)
+
+    @property
+    def firstPoints(self):
+        cdef SkPoint *p = NULL
+        cdef int count = 0
+        cdef list result = []
+        if self.getFirstPoints(&p, &count):
+            for i in range(count):
+                result.append((p[i].x(), p[i].y()))
+            if p is not NULL:
+                PyMem_Free(p)
+        return result
+
+    cdef int getFirstPoints(self, SkPoint **pp, int *count) except -1:
+        cdef int c = self.path.countVerbs()
+        if c == 0:
+            return 0  # empty
+
+        cdef SkPoint *points = <SkPoint *> PyMem_Malloc(c * sizeof(SkPoint))
+        if not points:
+            raise MemoryError()
+
+        cdef SkPath.RawIter iterator = SkPath.RawIter(self.path)
+        cdef SkPath.Verb verb
+        cdef SkPoint p[4]
+
+        cdef int i = 0
+        while True:
+            verb = iterator.next(p)
+            if verb == kMove_Verb:
+                points[i] = p[0]
+                i += 1
+            elif verb == kDone_Verb:
+                break
+
+        points = <SkPoint *> PyMem_Realloc(points, i * sizeof(SkPoint))
+        count[0] = i
+        pp[0] = points
+
+        return 1
+
     @property
     def contours(self):
         cdef SkPath temp
@@ -388,7 +434,16 @@ cdef uint8_t *POINTS_IN_VERB = [
     0   # DONE
 ]
 
-cdef dict PEN_METHODS = {
+cpdef dict VERB_METHODS = {
+    kMove_Verb: "moveTo",
+    kLine_Verb: "lineTo",
+    kQuad_Verb: "quadTo",
+    kConic_Verb: "conicTo",
+    kCubic_Verb: "cubicTo",
+    kClose_Verb: "close",
+}
+
+cpdef dict PEN_METHODS = {
     kMove_Verb: "moveTo",
     kLine_Verb: "lineTo",
     kQuad_Verb: "qCurveTo",
@@ -667,6 +722,41 @@ cdef int path_is_inside(const SkPath& self, const SkPath& other) except -1:
     return 1
 
 
+@cython.wraparound(False)
+@cython.boundscheck(False)
+cpdef int restore_starting_points(Path path, list points) except -1:
+    if not points:
+        return 0
+
+    cdef list contours = list(path.contours)
+    cdef Py_ssize_t n = len(contours)
+    cdef Py_ssize_t m = len(points)
+    cdef int i, j
+    cdef Path this
+    cdef bint modified = False
+
+    for i in range(n):
+        this = contours[i]
+        for j in range(m):
+            pt = points[j]
+            if set_contour_start_point(this, pt[0], pt[1]):
+                modified = True
+                # we don't retry the same point again on a different contour
+                del points[j]
+                m -= 1
+                break
+
+    if not modified:
+        return 0
+
+    path.path.rewind()
+    for i in range(n):
+        this = contours[i]
+        path.path.addPath(this.path)
+
+    return 1
+
+
 DEF DEBUG_WINDING = False
 
 
@@ -794,21 +884,168 @@ cdef list join_quadratic_segments(list quad_segments):
     return new_segments
 
 
-cpdef Path op(Path one, Path two, SkPathOp operator, fix_winding=True):
+cdef int find_oncurve_point(
+    SkScalar x,
+    SkScalar y,
+    const SkPoint *pts,
+    int pt_count,
+    const uint8_t *verbs,
+    int verb_count,
+    int *pt_index,
+    int *verb_index,
+) except -1:
+    cdef SkPoint oncurve
+    cdef uint8_t v
+    cdef int i, j, n
+    cdef int seen = 0
+
+    for i in range(verb_count):
+        v = verbs[i]
+        n = pts_in_verb(v)
+        if n == 0:
+            continue
+        assert seen + n <= pt_count
+        j = seen + n - 1
+        oncurve = pts[j]
+        if oncurve.equals(x, y):
+            pt_index[0] = j
+            verb_index[0] = i
+            return 1
+        seen += n
+
+    return 0
+
+
+cdef int contour_is_closed(const uint8_t *verbs, int verb_count) except -1:
+    cdef int i
+    cdef uint8_t v
+    cdef bint closed = False
+    for i in range(1, verb_count):
+        v = verbs[i]
+        if v == kMove_Verb:
+            raise ValueError("expected single contour")
+        elif v == kClose_Verb:
+            closed = True
+    return closed
+
+
+cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1:
+    cdef SkPath *skpath = &path.path
+
+    cdef _VerbArray va = _VerbArray(path)
+    cdef uint8_t *verbs = va.data
+    cdef int verb_count = va.count
+
+    cdef _SkPointArray pa = _SkPointArray(path)
+    cdef SkPoint *pts = pa.data
+    cdef int pt_count = pa.count
+
+    cdef bint closed = contour_is_closed(verbs, verb_count)
+
+    cdef int pt_index = -1
+    cdef int verb_index = -1
+    cdef bint found = find_oncurve_point(
+        x, y,
+        pts,
+        pt_count,
+        verbs,
+        verb_count,
+        &pt_index,
+        &verb_index,
+    )
+    if not found or pt_index == 0 or (
+        not closed and pt_index != (pt_count - 1)
+    ):
+        return 0
+
+    if not closed and pt_index == (pt_count - 1):
+        reverse_contour(path)
+        return 1
+
+    cdef SkPath.FillType fill = skpath.getFillType()
+    skpath.rewind()
+    skpath.setFillType(fill)
+
+    cdef uint8_t first_verb
+    cdef SkPoint first_pt
+    cdef int vi, pi
+
+    first_verb = verbs[verb_index]
+    vi = (verb_index + 1) % verb_count
+
+    first_pt = pts[pt_index]
+    pi = (pt_index + 1) % pt_count
+
+    skpath.moveTo(first_pt)
+
+    cdef int i, n
+    cdef uint8_t v = kDone_Verb
+    cdef SkPoint *last = &first_pt
+    for i in range(1, verb_count):
+        v = verbs[vi]
+        n = pts_in_verb(v)
+        assert pi + n <= pt_count
+        if v == kMove_Verb:
+            if last[0] != pts[pi]:
+                skpath.lineTo(pts[pi])
+        elif v == kLine_Verb:
+            skpath.lineTo(pts[pi])
+            last = pts + pi
+        elif v == kQuad_Verb:
+            skpath.quadTo(pts[pi], pts[pi + 1])
+            last = pts + pi + 1
+        elif v == kConic_Verb:
+            raise UnsupportedVerbError("CONIC")
+        elif v == kCubic_Verb:
+            skpath.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
+            last = pts + pi + 2
+        elif v == kClose_Verb:
+            pass
+        else:
+            raise AssertionError(v)
+        vi = (vi + 1) % verb_count
+        pi = (pi + n) % pt_count
+
+    if first_verb == kQuad_Verb:
+        skpath.quadTo(pts[pi], pts[pi + 1])
+    elif first_verb == kCubic_Verb:
+        skpath.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
+
+    skpath.close()
+    return 1
+
+
+cpdef Path op(
+    Path one,
+    Path two,
+    SkPathOp operator,
+    fix_winding=True,
+    keep_starting_points=True
+):
+    cdef list first_points
+    if keep_starting_points:
+        first_points = one.firstPoints + two.firstPoints
     cdef Path result = Path()
     if not Op(one.path, two.path, operator, &result.path):
         raise PathOpsError("operation did not succeed")
     if fix_winding:
         winding_from_even_odd(result)
+    if keep_starting_points:
+        restore_starting_points(result, first_points)
     return result
 
 
-cpdef Path simplify(Path path, fix_winding=True):
+cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
+    cdef list first_points
+    if keep_starting_points:
+        first_points = path.firstPoints
     cdef Path result = Path()
     if Simplify(path.path, &result.path):
         return result
     if fix_winding:
         winding_from_even_odd(result)
+    if keep_starting_points:
+        restore_starting_points(result, first_points)
     raise PathOpsError("operation did not succeed")
 
 
@@ -816,17 +1053,25 @@ cdef class OpBuilder:
 
     cdef SkOpBuilder builder
     cdef bint fix_winding
+    cdef bint keep_starting_points
+    cdef list first_points
 
-    def __init__(self, bint fix_winding=True):
+    def __init__(self, bint fix_winding=True, keep_starting_points=True):
         self.fix_winding = fix_winding
+        self.keep_starting_points = keep_starting_points
+        self.first_points = []
 
     cpdef add(self, Path path, SkPathOp operator):
         self.builder.add(path.path, operator)
+        if self.keep_starting_points:
+            self.first_points.extend(path.firstPoints)
 
     cpdef Path resolve(self):
         cdef Path result = Path()
         if self.builder.resolve(&result.path):
             if self.fix_winding:
                 winding_from_even_odd(result)
+            if self.keep_starting_points:
+                restore_starting_points(result, self.first_points)
             return result
         raise PathOpsError("operation did not succeed")

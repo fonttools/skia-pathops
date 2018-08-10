@@ -14,6 +14,12 @@ cdef extern from "SkPath.h":
         SkScalar x()
         SkScalar y()
 
+        bint equals(SkScalar x, SkScalar y)
+
+        bint operator==(const SkPoint& other)
+
+        bint operator!=(const SkPoint& other)
+
     cdef cppclass SkPath:
 
         SkPath() except +
