@@ -335,6 +335,17 @@ cpdef enum PathVerb:
     CLOSE = kClose_Verb
     DONE = kDone_Verb  # unused; we raise StopIteration instead
 
+DEF NUM_VERBS = 7
+
+cdef uint8_t *POINTS_IN_VERB = [
+    1,  # MOVE
+    1,  # LINE
+    2,  # QUAD
+    2,  # CONIC
+    3,  # CUBIC
+    0,  # CLOSE
+    0   # DONE
+]
 
 cdef dict PEN_METHODS = {
     kMove_Verb: "moveTo",
@@ -488,23 +499,6 @@ cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
     return value
 
 
-cdef uint8_t *POINTS_IN_VERB = [
-    1,  # kMove
-    1,  # kLine
-    2,  # kQuad
-    2,  # kConic
-    3,  # kCubic
-    0,  # kClose
-    0   # kDone
-]
-
-
-cdef int pts_in_verb(unsigned v) except -1:
-    if v >= 7:  # constant length of POINTS_IN_VERB static array
-        raise IndexError(v)
-    return POINTS_IN_VERB[v]
-
-
 cdef class _VerbArray:
 
     cdef uint8_t *data
@@ -535,6 +529,12 @@ cdef class _SkPointArray:
 
     def __dealloc__(self):
         PyMem_Free(self.data)  # no-op if data is NULL
+
+
+cdef inline int pts_in_verb(unsigned v) except -1:
+    if v >= NUM_VERBS:
+        raise IndexError(v)
+    return POINTS_IN_VERB[v]
 
 
 cdef bint reverse_contour(Path path) except False:
