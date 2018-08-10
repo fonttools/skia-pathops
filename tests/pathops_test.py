@@ -149,7 +149,7 @@ class OpBuilderTest(object):
         pen2.lineTo((5940, 2790))
         pen2.closePath()
 
-        builder = OpBuilder(fix_winding=False)
+        builder = OpBuilder(fix_winding=False, keep_starting_points=False)
         builder.add(path1, PathOp.UNION)
         builder.add(path2, PathOp.UNION)
         result = builder.resolve()
