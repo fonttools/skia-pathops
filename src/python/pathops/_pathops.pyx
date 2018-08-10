@@ -210,6 +210,14 @@ cdef class Path:
             s.append("path.%s(%s)" % (method, args))
         return "\n".join(s)
 
+    def __repr__(self):
+        return "<pathops.Path object at %s: %d contours>" % (
+            hex(id(self)), self.countContours()
+        )
+
+    def __len__(self):
+        return self.countContours()
+
     cpdef addPath(self, Path path):
         self.path.addPath(path.path)
 
@@ -300,6 +308,24 @@ cdef class Path:
     def points(self):
         return self.getPoints()
 
+    cdef int countContours(self) except -1:
+        if self.path.isEmpty():
+            return 0
+        cdef int i, n, count
+        cdef uint8_t *verbs
+        count = self.path.countVerbs()
+        verbs = <uint8_t *> PyMem_Malloc(count)
+        if not verbs:
+            raise MemoryError()
+        try:
+            self.path.getVerbs(verbs, count)
+            n = 0
+            for i in range(count):
+                if verbs[i] == kMove_Verb:
+                    n += 1
+            return n
+        finally:
+            PyMem_Free(verbs)
     @property
     def contours(self):
         cdef SkPath temp
