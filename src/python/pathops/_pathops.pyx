@@ -47,21 +47,6 @@ cdef class OpenPathError(PathOpsError):
     pass
 
 
-cpdef enum PathOp:
-    DIFFERENCE = kDifference_SkPathOp
-    INTERSECTION = kIntersect_SkPathOp
-    UNION = kUnion_SkPathOp
-    XOR = kXOR_SkPathOp
-    REVERSE_DIFFERENCE = kReverseDifference_SkPathOp
-
-
-cpdef enum FillType:
-    WINDING = kWinding_FillType
-    EVEN_ODD = kEvenOdd_FillType
-    INVERSE_WINDING = kInverseWinding_FillType
-    INVERSE_EVEN_ODD = kInverseEvenOdd_FillType
-
-
 cdef Path new_path(SkPath skpath):
     cdef Path p = Path()
     p.path = skpath
@@ -69,8 +54,6 @@ cdef Path new_path(SkPath skpath):
 
 
 cdef class Path:
-
-    cdef SkPath path
 
     def __init__(self, other=None, fillType=None):
         cdef Path static_path
@@ -413,15 +396,6 @@ cdef class Path:
                 raise AssertionError(verb)
 
 
-cpdef enum PathVerb:
-    MOVE = kMove_Verb
-    LINE = kLine_Verb
-    QUAD = kQuad_Verb
-    CONIC = kConic_Verb  # unsupported
-    CUBIC = kCubic_Verb
-    CLOSE = kClose_Verb
-    DONE = kDone_Verb  # unused; we raise StopIteration instead
-
 DEF NUM_VERBS = 7
 
 cdef uint8_t *POINTS_IN_VERB = [
@@ -453,9 +427,6 @@ cpdef dict PEN_METHODS = {
 
 
 cdef class PathIterator:
-
-    cdef Path path
-    cdef SkPath.RawIter iterator
 
     def __cinit__(self, Path path):
         self.path = path
@@ -500,9 +471,6 @@ cdef class PathIterator:
 
 
 cdef class PathPen:
-
-    cdef Path path
-    cdef bint allow_open_paths
 
     def __cinit__(self, Path path, bint allow_open_paths=True):
         self.path = path
@@ -597,9 +565,6 @@ cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
 
 cdef class _VerbArray:
 
-    cdef uint8_t *data
-    cdef int count
-
     def __cinit__(self, Path path):
         self.count = path.path.countVerbs()
         self.data = <uint8_t *> PyMem_Malloc(self.count)
@@ -612,9 +577,6 @@ cdef class _VerbArray:
 
 
 cdef class _SkPointArray:
-
-    cdef SkPoint *data
-    cdef int count
 
     def __cinit__(self, Path path):
         self.count = path.path.countPoints()
@@ -856,7 +818,7 @@ cdef list decompose_quadratic_segment(tuple points):
 cdef double ROUGH_EPSILON = FLT_EPSILON * 64
 
 
-cdef bint almost_equal(SkScalar v1, SkScalar v2):
+cdef inline bint almost_equal(SkScalar v1, SkScalar v2):
     return fabs(v1 - v2) < ROUGH_EPSILON
 
 
@@ -1050,11 +1012,6 @@ cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
 
 
 cdef class OpBuilder:
-
-    cdef SkOpBuilder builder
-    cdef bint fix_winding
-    cdef bint keep_starting_points
-    cdef list first_points
 
     def __init__(self, bint fix_winding=True, keep_starting_points=True):
         self.fix_winding = fix_winding
