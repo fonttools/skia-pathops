@@ -94,6 +94,10 @@ cdef extern from "SkPath.h":
 
             SkScalar conicWeight()
 
+            bint isCloseLine()
+
+            bint isClosedContour()
+
         cppclass RawIter:
 
             RawIter() except +
