@@ -431,3 +431,67 @@ def test_reverse_path(operations, expected):
     recpen = RecordingPen()
     path.draw(recpen)
     assert recpen.value == expected
+
+
+
+def assert_approx_equal_paths(path1, path2):
+    assert path1.verbs == path2.verbs
+    points1 = path1.points
+    points2 = path2.points
+    assert len(points1) == len(points2)
+    for pt1, pt2 in zip(points1, points2):
+        assert pt1 == pytest.approx(pt2, rel=1e-3)
+
+
+def test_duplicate_start_point():
+    # https://github.com/fonttools/skia-pathops/issues/13
+    path = Path()
+    path.moveTo(177.0, 258.0)
+    path.lineTo(200.0, 269.0)
+    path.cubicTo(200.0, 356.0, 250.0, 410.0, 400.0, 410.0)
+    path.cubicTo(550.0, 410.0, 600.0, 356.0, 600.0, 269.0)
+    path.lineTo(600.0, 257.0)
+    path.cubicTo(600.0, 179.0, 580.0, 78.0, 410.0, 78.0)
+    path.cubicTo(240.0, 78.0, 200.0, 159.0, 200.0, 277.0)
+    path.lineTo(200.0, 519.0)
+    path.cubicTo(200.0, 636.0, 230.0, 720.0, 400.0, 720.0)
+    path.cubicTo(531.0, 720.0, 564.0, 686.0, 582.0, 603.0)
+    path.lineTo(691.0, 626.0)
+    path.cubicTo(664.0, 757.0, 581.0, 810.0, 401.0, 810.0)
+    path.cubicTo(181.0, 810.0, 100.0, 696.0, 100.0, 519.0)
+    path.lineTo(100.0, 277.0)
+    path.cubicTo(100.0, 102.0, 190.0, -10.0, 410.0, -10.0)
+    path.cubicTo(630.0, -10.0, 700.0, 115.0, 700.0, 250.0)
+    path.lineTo(700.0, 272.0)
+    path.cubicTo(700.0, 419.0, 601.0, 500.0, 401.0, 500.0)
+    path.cubicTo(201.0, 500.0, 150.0, 416.0, 150.0, 269.0)
+    path.lineTo(177.0, 258.0)
+    path.close()
+
+    path.simplify()
+
+    expected = Path()
+    expected.moveTo(200.0, 439.1)
+    expected.lineTo(200.0, 519.0)
+    expected.cubicTo(200.0, 636.0, 230.0, 720.0, 400.0, 720.0)
+    expected.cubicTo(531.0, 720.0, 564.0, 686.0, 582.0, 603.0)
+    expected.lineTo(691.0, 626.0)
+    expected.cubicTo(664.0, 757.0, 581.0, 810.0, 401.0, 810.0)
+    expected.cubicTo(181.0, 810.0, 100.0, 696.0, 100.0, 519.0)
+    expected.lineTo(100.0, 277.0)
+    expected.cubicTo(100.0, 102.0, 190.0, -10.0, 410.0, -10.0)
+    expected.cubicTo(630.0, -10.0, 700.0, 115.0, 700.0, 250.0)
+    expected.lineTo(700.0, 272.0)
+    expected.cubicTo(700.0, 419.0, 601.0, 500.0, 401.0, 500.0)
+    expected.cubicTo(300.557, 500.0, 237.695, 478.814, 200.0, 439.1)
+    expected.close()
+    expected.moveTo(200.023, 272.184)
+    expected.cubicTo(201.24, 357.316, 251.839, 410.0, 400.0, 410.0)
+    expected.cubicTo(550.0, 410.0, 600.0, 356.0, 600.0, 269.0)
+    expected.lineTo(600.0, 257.0)
+    expected.cubicTo(600.0, 179.0, 580.0, 78.0, 410.0, 78.0)
+    expected.cubicTo(242.323, 78.0, 201.117, 156.802, 200.023, 272.184)
+    # expected.lineTo(200.023, 272.184)  # this should not be present
+    expected.close()
+
+    assert_approx_equal_paths(path, expected)
