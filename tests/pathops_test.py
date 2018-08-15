@@ -1,5 +1,12 @@
 from pathops import (
-    Path, PathPen, OpenPathError, OpBuilder, PathOp, PathVerb
+    Path,
+    PathPen,
+    OpenPathError,
+    OpBuilder,
+    PathOp,
+    PathVerb,
+    bits2float,
+    float2bits,
 )
 from fontTools.pens.recordingPen import RecordingPen
 
@@ -495,3 +502,14 @@ def test_duplicate_start_point():
     expected.close()
 
     assert_approx_equal_paths(path, expected)
+
+
+def test_float2bits():
+    assert float2bits(17.5) == 0x418c0000
+    assert float2bits(-10.0) == 0xc1200000
+
+
+def test_bits2float():
+    assert bits2float(0x418c0000) == 17.5
+    assert bits2float(0xc1200000) == -10.0
+    assert bits2float(-0x3ee00000) == -10.0  # this works too
