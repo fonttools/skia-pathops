@@ -11,6 +11,8 @@ from ._pathops import (
     PathOpsError,
     UnsupportedVerbError,
     OpenPathError,
+    bits2float,
+    float2bits,
 )
 
 from .operations import (
