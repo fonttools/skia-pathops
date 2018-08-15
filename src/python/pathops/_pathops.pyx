@@ -27,7 +27,7 @@ from ._skia.pathops cimport (
     kXOR_SkPathOp,
     kReverseDifference_SkPathOp,
 )
-from libc.stdint cimport uint8_t, int32_t
+from libc.stdint cimport uint8_t, int32_t, uint32_t
 from libc.math cimport fabs
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from libc.string cimport memset
@@ -63,10 +63,15 @@ cdef inline int32_t _float2bits(float x):
 
 def float2bits(float x):
     """
-    >>> hex(float2bits(17.5))
+    >>> float2bits(17.5)
     '0x418c0000'
+    >>> float2bits(-10.0)
+    '0xc1200000'
     """
-    return _float2bits(x)
+    # we use unsigned to match the C printf %x behaviour
+    # used by Skia's SkPath::dumpHex
+    cdef uint32_t bits = <uint32_t>_float2bits(x)
+    return hex(bits)
 
 
 cdef inline float _bits2float(int32_t float_as_bits):
@@ -75,12 +80,17 @@ cdef inline float _bits2float(int32_t float_as_bits):
     return data.Float
 
 
-def bits2float(int32_t float_as_bits):
+def bits2float(str float_hex):
     """
-    >>> bits2float(int('0x418c0000', 16))
+    >>> bits2float('0x418c0000')
     17.5
+    >>> bits2float('-0x3ee00000')
+    -10.0
+    >>> bits2float('0xc1200000')
+    -10.0
     """
-    return _bits2float(float_as_bits)
+    cdef long i = int(float_hex, 16)
+    return _bits2float(<int32_t>i)
 
 
 cdef float SCALAR_NEARLY_ZERO_SQD = SK_ScalarNearlyZero * SK_ScalarNearlyZero
@@ -243,7 +253,7 @@ cdef class Path:
         if self.path.isEmpty():
             return ""
         if as_hex:
-            to_string = lambda f: "bits2float(%s)" % hex(float2bits(f))
+            to_string = lambda f: "bits2float(%s)" % float2bits(f)
         else:
             to_string = lambda f: "%g" % f
         s = ["path.fillType = %s" % self.fillType]
