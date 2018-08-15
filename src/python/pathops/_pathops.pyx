@@ -63,15 +63,15 @@ cdef inline int32_t _float2bits(float x):
 
 def float2bits(float x):
     """
-    >>> float2bits(17.5)
+    >>> hex(float2bits(17.5))
     '0x418c0000'
-    >>> float2bits(-10.0)
+    >>> hex(float2bits(-10.0))
     '0xc1200000'
     """
     # we use unsigned to match the C printf %x behaviour
     # used by Skia's SkPath::dumpHex
     cdef uint32_t bits = <uint32_t>_float2bits(x)
-    return hex(bits)
+    return bits
 
 
 cdef inline float _bits2float(int32_t float_as_bits):
@@ -80,17 +80,16 @@ cdef inline float _bits2float(int32_t float_as_bits):
     return data.Float
 
 
-def bits2float(str float_hex):
+def bits2float(long float_as_bits):
     """
-    >>> bits2float('0x418c0000')
+    >>> bits2float(0x418c0000)
     17.5
-    >>> bits2float('-0x3ee00000')
+    >>> bits2float(-0x3ee00000)
     -10.0
-    >>> bits2float('0xc1200000')
+    >>> bits2float(0xc1200000)
     -10.0
     """
-    cdef long i = int(float_hex, 16)
-    return _bits2float(<int32_t>i)
+    return _bits2float(<int32_t>float_as_bits)
 
 
 cdef float SCALAR_NEARLY_ZERO_SQD = SK_ScalarNearlyZero * SK_ScalarNearlyZero
@@ -253,7 +252,7 @@ cdef class Path:
         if self.path.isEmpty():
             return ""
         if as_hex:
-            to_string = lambda f: "bits2float(%s)" % float2bits(f)
+            to_string = lambda f: "bits2float(%s)" % hex(float2bits(f))
         else:
             to_string = lambda f: "%g" % f
         s = ["path.fillType = %s" % self.fillType]
