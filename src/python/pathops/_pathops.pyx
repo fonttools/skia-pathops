@@ -47,12 +47,6 @@ cdef class OpenPathError(PathOpsError):
     pass
 
 
-cdef Path new_path(SkPath skpath):
-    cdef Path p = Path()
-    p.path = skpath
-    return p
-
-
 # Helpers to convert to/from a float and its bit pattern
 
 cdef inline int32_t _float2bits(float x):
@@ -127,6 +121,12 @@ cdef class Path:
                 other.draw(self.getPen())
         if fillType is not None:
             self.fillType = fillType
+
+    @staticmethod
+    cdef Path create(const SkPath& path):
+        cdef Path self = Path.__new__(Path)
+        self.path = path
+        return self
 
     cpdef PathPen getPen(self, bint allow_open_paths=True):
         return PathPen(self, allow_open_paths=allow_open_paths)
@@ -323,7 +323,7 @@ cdef class Path:
         cdef SkPath skpath
         skpath.setFillType(self.path.getFillType())
         for contour in self.contours:
-            reverse_contour(contour)
+            reverse_contour(contour.path)
             skpath.addPath(contour.path)
         self.path = skpath
 
@@ -446,7 +446,7 @@ cdef class Path:
             verb = iterator.next(p)
             if verb == kMove_Verb:
                 if not temp.isEmpty():
-                    yield new_path(temp)
+                    yield Path.create(temp)
                     temp.rewind()
                     temp.setFillType(fillType)
                 temp.moveTo(p[0])
@@ -460,12 +460,12 @@ cdef class Path:
                 temp.cubicTo(p[1], p[2], p[3])
             elif verb == kClose_Verb:
                 temp.close()
-                yield new_path(temp)
+                yield Path.create(temp)
                 temp.rewind()
                 temp.setFillType(fillType)
             elif verb == kDone_Verb:
                 if not temp.isEmpty():
-                    yield new_path(temp)
+                    yield Path.create(temp)
                     temp.reset()
                 break
             else:
@@ -641,12 +641,15 @@ cdef double get_path_area(const SkPath& path) except? -1234567:
 
 cdef class _VerbArray:
 
-    def __cinit__(self, Path path):
-        self.count = path.path.countVerbs()
+    @staticmethod
+    cdef _VerbArray create(const SkPath& path):
+        cdef _VerbArray self = _VerbArray.__new__(_VerbArray)
+        self.count = path.countVerbs()
         self.data = <uint8_t *> PyMem_Malloc(self.count)
         if not self.data:
             raise MemoryError()
-        path.path.getVerbs(self.data, self.count)
+        path.getVerbs(self.data, self.count)
+        return self
 
     def __dealloc__(self):
         PyMem_Free(self.data)  # no-op if data is NULL
@@ -654,12 +657,15 @@ cdef class _VerbArray:
 
 cdef class _SkPointArray:
 
-    def __cinit__(self, Path path):
-        self.count = path.path.countPoints()
+    @staticmethod
+    cdef _SkPointArray create(const SkPath& path):
+        cdef _SkPointArray self = _SkPointArray.__new__(_SkPointArray)
+        self.count = path.countPoints()
         self.data = <SkPoint *> PyMem_Malloc(self.count * sizeof(SkPoint))
         if not self.data:
             raise MemoryError()
-        path.path.getPoints(self.data, self.count)
+        path.getPoints(self.data, self.count)
+        return self
 
     def __dealloc__(self):
         PyMem_Free(self.data)  # no-op if data is NULL
@@ -671,19 +677,18 @@ cdef inline int pts_in_verb(unsigned v) except -1:
     return POINTS_IN_VERB[v]
 
 
-cdef bint reverse_contour(Path path) except False:
-    cdef SkPath *skpath = &path.path
+cdef bint reverse_contour(SkPath& path) except False:
     cdef SkPath temp
     cdef SkPoint lastPt
 
-    if not skpath.getLastPt(&lastPt):
+    if not path.getLastPt(&lastPt):
         return True  # ignore empty path
 
-    cdef _VerbArray va = _VerbArray(path)
+    cdef _VerbArray va = _VerbArray.create(path)
     cdef uint8_t *verbsStart = va.data  # pointer to the first verb
     cdef uint8_t *verbs = verbsStart + va.count - 1  # pointer to the last verb
 
-    cdef _SkPointArray pa = _SkPointArray(path)
+    cdef _SkPointArray pa = _SkPointArray.create(path)
     cdef SkPoint *pts = pa.data + pa.count - 1  # pointer to the last point
 
     # the last point becomes the first
@@ -715,8 +720,11 @@ cdef bint reverse_contour(Path path) except False:
     if closed:
         temp.close()
 
-    temp.setFillType(skpath.getFillType())
-    skpath[0] = temp
+    temp.setFillType(path.getFillType())
+    # assignment to references is allowed in C++ but Cython doesn't support it
+    # https://github.com/cython/cython/issues/1863
+    # path = temp
+    (&path)[0] = temp
     return True
 
 
@@ -777,7 +785,7 @@ cpdef int restore_starting_points(Path path, list points) except -1:
         this = contours[i]
         for j in range(m):
             pt = points[j]
-            if set_contour_start_point(this, pt[0], pt[1]):
+            if set_contour_start_point(this.path, pt[0], pt[1]):
                 modified = True
                 # we don't retry the same point again on a different contour
                 del points[j]
@@ -861,7 +869,7 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
             if inverse ^ is_clockwise ^ is_even:
                 IF DEBUG_WINDING:
                     print("reverse_contour %d" % i)
-                reverse_contour(contour)
+                reverse_contour(contour.path)
     finally:
         PyMem_Free(nested)
 
@@ -959,14 +967,12 @@ cdef int contour_is_closed(const uint8_t *verbs, int verb_count) except -1:
     return closed
 
 
-cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1:
-    cdef SkPath *skpath = &path.path
-
-    cdef _VerbArray va = _VerbArray(path)
+cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1:
+    cdef _VerbArray va = _VerbArray.create(path)
     cdef uint8_t *verbs = va.data
     cdef int verb_count = va.count
 
-    cdef _SkPointArray pa = _SkPointArray(path)
+    cdef _SkPointArray pa = _SkPointArray.create(path)
     cdef SkPoint *pts = pa.data
     cdef int pt_count = pa.count
 
@@ -992,9 +998,9 @@ cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1:
         reverse_contour(path)
         return 1
 
-    cdef SkPath.FillType fill = skpath.getFillType()
-    skpath.rewind()
-    skpath.setFillType(fill)
+    cdef SkPath.FillType fill = path.getFillType()
+    path.rewind()
+    path.setFillType(fill)
 
     cdef uint8_t first_verb
     cdef SkPoint first_pt
@@ -1006,7 +1012,7 @@ cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1:
     first_pt = pts[pt_index]
     pi = (pt_index + 1) % pt_count
 
-    skpath.moveTo(first_pt)
+    path.moveTo(first_pt)
 
     cdef int i, n
     cdef uint8_t v = kDone_Verb
@@ -1017,17 +1023,17 @@ cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1:
         assert pi + n <= pt_count
         if v == kMove_Verb:
             if last[0] != pts[pi]:
-                skpath.lineTo(pts[pi])
+                path.lineTo(pts[pi])
         elif v == kLine_Verb:
-            skpath.lineTo(pts[pi])
+            path.lineTo(pts[pi])
             last = pts + pi
         elif v == kQuad_Verb:
-            skpath.quadTo(pts[pi], pts[pi + 1])
+            path.quadTo(pts[pi], pts[pi + 1])
             last = pts + pi + 1
         elif v == kConic_Verb:
             raise UnsupportedVerbError("CONIC")
         elif v == kCubic_Verb:
-            skpath.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
+            path.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
             last = pts + pi + 2
         elif v == kClose_Verb:
             pass
@@ -1037,11 +1043,11 @@ cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1:
         pi = (pi + n) % pt_count
 
     if first_verb == kQuad_Verb:
-        skpath.quadTo(pts[pi], pts[pi + 1])
+        path.quadTo(pts[pi], pts[pi + 1])
     elif first_verb == kCubic_Verb:
-        skpath.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
+        path.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
 
-    skpath.close()
+    path.close()
     return 1
 
 

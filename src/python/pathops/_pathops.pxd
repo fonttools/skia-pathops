@@ -41,9 +41,6 @@ cpdef enum FillType:
     INVERSE_EVEN_ODD = kInverseEvenOdd_FillType
 
 
-cdef Path new_path(SkPath skpath)
-
-
 cdef union FloatIntUnion:
     float Float
     int32_t SignBitInt
@@ -67,6 +64,9 @@ cdef bint points_almost_equal(const SkPoint& p1, const SkPoint& p2)
 cdef class Path:
 
     cdef SkPath path
+
+    @staticmethod
+    cdef Path create(const SkPath& path)
 
     cpdef PathPen getPen(self, bint allow_open_paths=*)
 
@@ -181,17 +181,23 @@ cdef class _VerbArray:
     cdef uint8_t *data
     cdef int count
 
+    @staticmethod
+    cdef _VerbArray create(const SkPath& path)
+
 
 cdef class _SkPointArray:
 
     cdef SkPoint *data
     cdef int count
 
+    @staticmethod
+    cdef _SkPointArray create(const SkPath& path)
+
 
 cdef int pts_in_verb(unsigned v) except -1
 
 
-cdef bint reverse_contour(Path path) except False
+cdef bint reverse_contour(SkPath& path) except False
 
 
 cdef int path_is_inside(const SkPath& self, const SkPath& other) except -1
@@ -224,7 +230,7 @@ cdef int find_oncurve_point(
 cdef int contour_is_closed(const uint8_t *verbs, int verb_count) except -1
 
 
-cpdef int set_contour_start_point(Path path, SkScalar x, SkScalar y) except -1
+cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
 
 
 cpdef Path op(
