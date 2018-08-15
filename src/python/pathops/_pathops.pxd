@@ -143,7 +143,7 @@ cpdef dict VERB_METHODS
 cpdef dict PEN_METHODS
 
 
-cdef class PathIterator:
+cdef class RawPathIterator:
 
     cdef Path path
     cdef SkPath.RawIter iterator

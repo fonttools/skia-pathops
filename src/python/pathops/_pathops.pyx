@@ -132,7 +132,7 @@ cdef class Path:
         return PathPen(self, allow_open_paths=allow_open_paths)
 
     def __iter__(self):
-        return PathIterator(self)
+        return RawPathIterator(self)
 
     cpdef bint add(self, PathVerb verb, tuple pts) except False:
         if verb is PathVerb.MOVE:
@@ -205,7 +205,7 @@ cdef class Path:
         cdef tuple pts
         cdef list quads
         cdef bint closed = True
-        cdef PathIterator iterator = iter(self)
+        cdef RawPathIterator iterator = iter(self)
 
         for verb, pts in iterator:
             try:
@@ -502,7 +502,7 @@ cpdef dict PEN_METHODS = {
 }
 
 
-cdef class PathIterator:
+cdef class RawPathIterator:
 
     def __cinit__(self, Path path):
         self.path = path

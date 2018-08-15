@@ -2,7 +2,6 @@ from ._pathops import (
     PathPen,
     Path,
     PathVerb,
-    PathIterator,
     PathOp,
     FillType,
     op,
