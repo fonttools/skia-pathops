@@ -23,8 +23,7 @@ from ._skia.pathops cimport (
     kXOR_SkPathOp,
     kReverseDifference_SkPathOp,
 )
-from libc.stdint cimport uint8_t
-from libc.float cimport FLT_EPSILON
+from libc.stdint cimport uint8_t, int32_t
 
 
 cpdef enum PathOp:
@@ -43,6 +42,26 @@ cpdef enum FillType:
 
 
 cdef Path new_path(SkPath skpath)
+
+
+cdef union FloatIntUnion:
+    float Float
+    int32_t SignBitInt
+
+
+cdef int32_t _float2bits(float x)
+
+
+cdef float _bits2float(int32_t float_as_bits)
+
+
+cdef float SCALAR_NEARLY_ZERO_SQD
+
+
+cdef bint can_normalize(SkScalar dx, SkScalar dy)
+
+
+cdef bint points_almost_equal(const SkPoint& p1, const SkPoint& p2)
 
 
 cdef class Path:
@@ -154,7 +173,7 @@ cdef class PathPen:
     cpdef addComponent(self, glyphName, transformation)
 
 
-cdef double get_path_area(const SkPath& path) except? FLT_EPSILON
+cdef double get_path_area(const SkPath& path) except? -1234567
 
 
 cdef class _VerbArray:
@@ -185,12 +204,6 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=*) except False
 
 
 cdef list decompose_quadratic_segment(tuple points)
-
-
-cdef double ROUGH_EPSILON
-
-
-cdef bint almost_equal(SkScalar v1, SkScalar v2)
 
 
 cdef list join_quadratic_segments(list quad_segments)

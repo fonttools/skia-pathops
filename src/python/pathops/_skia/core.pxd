@@ -48,6 +48,8 @@ cdef extern from "SkPath.h":
 
         void dump()
 
+        void dumpHex()
+
         void reset()
 
         void rewind()
@@ -139,3 +141,9 @@ cdef extern from "SkRect.h":
 
         @staticmethod
         bint Intersects(const SkRect& a, const SkRect& b)
+
+
+cdef extern from "SkScalar.h":
+
+    cdef enum:
+        SK_ScalarNearlyZero

@@ -14,6 +14,7 @@ from ._skia.core cimport (
     kEvenOdd_FillType,
     kInverseWinding_FillType,
     kInverseEvenOdd_FillType,
+    SK_ScalarNearlyZero,
 )
 from ._skia.pathops cimport (
     Op,
@@ -26,8 +27,7 @@ from ._skia.pathops cimport (
     kXOR_SkPathOp,
     kReverseDifference_SkPathOp,
 )
-from libc.stdint cimport uint8_t
-from libc.float cimport FLT_EPSILON
+from libc.stdint cimport uint8_t, int32_t
 from libc.math cimport fabs
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from libc.string cimport memset
@@ -51,6 +51,59 @@ cdef Path new_path(SkPath skpath):
     cdef Path p = Path()
     p.path = skpath
     return p
+
+
+# Helpers to convert to/from a float and its bit pattern
+
+cdef inline int32_t _float2bits(float x):
+    cdef FloatIntUnion data
+    data.Float = x
+    return data.SignBitInt
+
+
+def float2bits(float x):
+    """
+    >>> hex(float2bits(17.5))
+    '0x418c0000'
+    """
+    return _float2bits(x)
+
+
+cdef inline float _bits2float(int32_t float_as_bits):
+    cdef FloatIntUnion data
+    data.SignBitInt = float_as_bits
+    return data.Float
+
+
+def bits2float(int32_t float_as_bits):
+    """
+    >>> bits2float(int('0x418c0000', 16))
+    17.5
+    """
+    return _bits2float(float_as_bits)
+
+
+cdef float SCALAR_NEARLY_ZERO_SQD = SK_ScalarNearlyZero * SK_ScalarNearlyZero
+
+
+cdef inline bint can_normalize(SkScalar dx, SkScalar dy):
+    return (dx*dx + dy*dy) > SCALAR_NEARLY_ZERO_SQD
+
+
+cdef inline bint points_almost_equal(const SkPoint& p1, const SkPoint& p2):
+    return not can_normalize(p1.x() - p2.x(), p1.y() - p2.y())
+
+
+def test_points_almost_equal(tuple p1, tuple p2):
+    """
+    >>> test_points_almost_equal((0, 0), (0, 0.001))
+    False
+    >>> test_points_almost_equal((0, 0), (0, 0.0001))
+    True
+    """
+    cdef SkPoint sp1 = SkPoint.Make(p1[0], p1[1])
+    cdef SkPoint sp2 = SkPoint.Make(p2[0], p2[1])
+    return points_almost_equal(sp1, sp2)
 
 
 cdef class Path:
@@ -175,23 +228,37 @@ cdef class Path:
         if not closed:
             pen.endPath()
 
-    def dump(self, cpp=False):
+    def dump(self, cpp=False, as_hex=False):
         # print a text repesentation to stdout
-        if cpp:
-            self.path.dump()  # C++
+        if cpp:  # C++
+            if as_hex:
+                self.path.dumpHex()
+            else:
+                self.path.dump()
         else:
-            print(self)  # Python
+            print(self._to_string(as_hex=as_hex))  # Python
 
-    def __str__(self):
+    def _to_string(self, as_hex=False):
         # return a text repesentation as Python code
         if self.path.isEmpty():
             return ""
+        if as_hex:
+            to_string = lambda f: "bits2float(%s)" % hex(float2bits(f))
+        else:
+            to_string = lambda f: "%g" % f
         s = ["path.fillType = %s" % self.fillType]
         for verb, pts in self:
             method = VERB_METHODS[verb]
-            args = ", ".join(map(str, itertools.chain(*pts)))
-            s.append("path.%s(%s)" % (method, args))
+            scalars = list(itertools.chain(*pts))
+            args = ", ".join(to_string(s) for s in scalars)
+            line = "path.%s(%s)" % (method, args)
+            if as_hex and scalars:
+                line += "  # %s" % ", ".join("%g" % v for v in scalars)
+            s.append(line)
         return "\n".join(s)
+
+    def __str__(self):
+        return self._to_string()
 
     def __repr__(self):
         return "<pathops.Path object at %s: %d contours>" % (
@@ -507,7 +574,7 @@ cdef class PathPen:
         pass
 
 
-cdef double get_path_area(const SkPath& path) except? FLT_EPSILON:
+cdef double get_path_area(const SkPath& path) except? -1234567:
     # Adapted from fontTools/pens/areaPen.py
     cdef double value = .0
     cdef SkPath.Verb verb
@@ -815,18 +882,11 @@ cdef list decompose_quadratic_segment(tuple points):
     return quad_segments
 
 
-cdef double ROUGH_EPSILON = FLT_EPSILON * 64
-
-
-cdef inline bint almost_equal(SkScalar v1, SkScalar v2):
-    return fabs(v1 - v2) < ROUGH_EPSILON
-
-
 cdef list join_quadratic_segments(list quad_segments):
     cdef:
         int i
         list new_segments, points
-        SkScalar off1x, off1y, onx, ony, off2x, off2y
+        SkScalar off1x, off1y, onx, ony, off2x, off2y, midx, midy
 
     new_segments = []
     points = []
@@ -835,10 +895,9 @@ cdef list join_quadratic_segments(list quad_segments):
         (off2x, off2y), _ = quad_segments[i + 1]
         points.append((off1x, off1y))
         # skip oncurve if equal to midpoint between two consecutive offcurves
-        if not (
-            almost_equal(onx, (off1x + off2x) / 2)
-            and almost_equal(ony, (off1y + off2y) / 2)
-        ):
+        midx = (off1x + off2x) / 2
+        midy = (off1y + off2y) / 2
+        if can_normalize(onx - midx, ony - midy):
             points.append((onx, ony))
             new_segments.append(tuple(points))
             del points[:]
