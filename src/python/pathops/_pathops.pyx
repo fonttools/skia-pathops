@@ -581,16 +581,34 @@ cdef class PathPenIterator:
             return CLOSE_PATH
         elif verb == kLine_Verb:
             # XXX handle collinear points here
-            points = ((self.pts[0].x(), self.pts[0].y()),)
+            if (
+                self._next_verb_is(kClose_Verb)
+                and points_almost_equal(self.pts[0], self.move_pt)
+            ):
+                # skip closing lineTo if contour's last point ~= first
+                points = ((self.move_pt.x(), self.move_pt.y()),)
+            else:
+                points = ((self.pts[0].x(), self.pts[0].y()),)
             self.pts += 1
         elif verb == kQuad_Verb:
             points = self._join_quadratic_segments()
         elif verb == kCubic_Verb:
-            points = (
-                (self.pts[0].x(), self.pts[0].y()),
-                (self.pts[1].x(), self.pts[1].y()),
-                (self.pts[2].x(), self.pts[2].y()),
-            )
+            if (
+                self._next_verb_is(kClose_Verb)
+                and points_almost_equal(self.pts[2], self.move_pt)
+            ):
+                # skip closing lineTo if contour's last point ~= first
+                points = (
+                    (self.pts[0].x(), self.pts[0].y()),
+                    (self.pts[1].x(), self.pts[1].y()),
+                    (self.move_pt.x(), self.move_pt.y()),
+                )
+            else:
+                points = (
+                    (self.pts[0].x(), self.pts[0].y()),
+                    (self.pts[1].x(), self.pts[1].y()),
+                    (self.pts[2].x(), self.pts[2].y()),
+                )
             self.pts += 3
         else:
             raise UnsupportedVerbError(PathVerb(verb).name)
@@ -598,7 +616,14 @@ cdef class PathPenIterator:
         cdef str method = PEN_METHODS[verb]
         return (method, points)
 
+    cdef inline bint _next_verb_is(self, uint8_t verb):
+        return (
+            self.verbs + 1 < self.verb_stop
+            and (self.verbs + 1)[0] == verb
+        )
+
     cdef tuple _join_quadratic_segments(self):
+        # must only be called when the current verb is kQuad_Verb
         # assert self.verbs < self.verb_stop and self.verbs[0] == kQuad_Verb
 
         cdef uint8_t *verbs = self.verbs
@@ -608,18 +633,34 @@ cdef class PathPenIterator:
         cdef list points = []
 
         while True:
+            # always add the current quad's off-curve point
             points.append((pts[0].x(), pts[0].y()))
+            # check if the following segments (if any) are also quadratic
             next_verb_ptr = verbs + 1
-            if (
-                next_verb_ptr == self.verb_stop
-                or next_verb_ptr[0] != kQuad_Verb
-                or not is_middle_point(pts[0], pts[1], pts[2])
-            ):
-                points.append((pts[1].x(), pts[1].y()))
-                pts += 2
-                break
-            verbs = next_verb_ptr
+            if next_verb_ptr != self.verb_stop:
+                if next_verb_ptr[0] == kQuad_Verb:
+                    if is_middle_point(pts[0], pts[1], pts[2]):
+                        # skip TrueType "implied" on-curve point, and keep
+                        # evaluating the next quadratic segment
+                        verbs = next_verb_ptr
+                        pts += 2
+                        continue
+                elif (
+                    next_verb_ptr[0] == kClose_Verb
+                    and points_almost_equal(pts[1], self.move_pt)
+                ):
+                    # last segment on a closed contour: make sure there is no
+                    # extra closing lineTo when the last point is almost equal
+                    # to the moveTo point
+                    points.append((self.move_pt.x(), self.move_pt.y()))
+                    pts += 2
+                    break
+            # no more segments, or the next segment isn't quadratic, or it is
+            # but the on-curve point doesn't interpolate half-way in between
+            # the respective off-curve points; add on-curve and exit the loop
+            points.append((pts[1].x(), pts[1].y()))
             pts += 2
+            break
 
         self.verbs = verbs
         self.pts = pts
