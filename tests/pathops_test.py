@@ -5,10 +5,10 @@ from pathops import (
     OpBuilder,
     PathOp,
     PathVerb,
+    FillType,
     bits2float,
     float2bits,
 )
-from fontTools.pens.recordingPen import RecordingPen
 
 import pytest
 
@@ -25,10 +25,21 @@ class PathTest(object):
         assert isinstance(pen, PathPen)
         assert id(pen) != id(path.getPen())
 
+    def test_eq_operator(self):
+        path1 = Path()
+        path2 = Path()
+        assert path1 == path2
+        path1.moveTo(0, 0)
+        assert path1 != path2
+        path2.moveTo(0, 0)
+        assert path1 == path2
+        path1.fillType = FillType.EVEN_ODD
+        assert path1 != path2
+
     def test_copy(self):
         path1 = Path()
         path2 = Path(path1)
-        # TODO expose operator== to check for equality
+        assert path1 == path2
 
     def test_draw(self):
         path = Path()

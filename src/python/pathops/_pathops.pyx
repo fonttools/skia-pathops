@@ -277,6 +277,17 @@ cdef class Path:
     def __len__(self):
         return self.countContours()
 
+    def __eq__(self, other):
+        if not isinstance(other, Path):
+            return NotImplemented
+        cdef Path static_other = other
+        return self.path == static_other.path
+
+    def __ne__(self, other):
+        return not self == other
+
+    __hash__ = None  # Path is a mutable object, let's make it unhashable
+
     cpdef addPath(self, Path path):
         self.path.addPath(path.path)
 

@@ -25,6 +25,10 @@ cdef extern from "SkPath.h":
         SkPath() except +
         SkPath(SkPath& path) except +
 
+        bint operator==(const SkPath& other)
+
+        bint operator!=(const SkPath& other)
+
         void moveTo(SkScalar x, SkScalar y)
         void moveTo(const SkPoint& p)
 
