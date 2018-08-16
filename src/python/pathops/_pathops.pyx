@@ -117,6 +117,16 @@ cdef inline bint is_middle_point(
     return not can_normalize(p2.x() - midx, p2.y() - midy)
 
 
+def _format_hex_coords(floats):
+    floats = list(floats)
+    if not floats:
+        return ""
+    return "".join(
+        "\n    bits2float(%s),  # %g" % (hex(float2bits(f)), f)
+        for f in floats
+    ) + "\n"
+
+
 cdef class Path:
 
     def __init__(self, other=None, fillType=None):
@@ -231,17 +241,14 @@ cdef class Path:
         if self.path.isEmpty():
             return ""
         if as_hex:
-            to_string = lambda f: "bits2float(%s)" % hex(float2bits(f))
+            coords_to_string = _format_hex_coords
         else:
-            to_string = lambda f: "%g" % f
+            coords_to_string = lambda fs: (", ".join("%g" % f for f in fs))
         s = ["path.fillType = %s" % self.fillType]
         for verb, pts in self:
             method = VERB_METHODS[verb]
-            scalars = list(itertools.chain(*pts))
-            args = ", ".join(to_string(s) for s in scalars)
-            line = "path.%s(%s)" % (method, args)
-            if as_hex and scalars:
-                line += "  # %s" % ", ".join("%g" % v for v in scalars)
+            coords = itertools.chain(*pts)
+            line = "path.%s(%s)" % (method, coords_to_string(coords))
             s.append(line)
         return "\n".join(s)
 
