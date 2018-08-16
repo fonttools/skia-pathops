@@ -211,7 +211,7 @@ cdef class Path:
     cpdef draw(self, pen):
         cdef str method
         cdef tuple pts
-        cdef PathPenIterator iterator = PathPenIterator(self)
+        cdef SegmentPenIterator iterator = SegmentPenIterator(self)
 
         for method, pts in iterator:
             getattr(pen, method)(*pts)
@@ -461,6 +461,10 @@ cdef class Path:
             else:
                 raise AssertionError(verb)
 
+    @property
+    def segments(self):
+        return SegmentPenIterator(self)
+
 
 DEF NUM_VERBS = 7
 
@@ -490,6 +494,9 @@ cpdef dict PEN_METHODS = {
     kCubic_Verb: "curveTo",
     kClose_Verb: "closePath",
 }
+
+
+cdef tuple NO_POINTS = ()
 
 
 cdef class RawPathIterator:
@@ -524,7 +531,7 @@ cdef class RawPathIterator:
                    (p[2].x(), p[2].y()),
                    (p[3].x(), p[3].y()))
         elif verb == kClose_Verb:
-            pts = ()
+            pts = NO_POINTS
         elif verb == kDone_Verb:
             raise StopIteration()
         else:
@@ -533,12 +540,11 @@ cdef class RawPathIterator:
         return (PathVerb(verb), pts)
 
 
-cdef tuple NO_POINTS = ()
 cdef tuple END_PATH = ("endPath", NO_POINTS)
 cdef tuple CLOSE_PATH = ("closePath", NO_POINTS)
 
 
-cdef class PathPenIterator:
+cdef class SegmentPenIterator:
 
     def __cinit__(self, Path path):
         self.pa = _SkPointArray.create(path.path)

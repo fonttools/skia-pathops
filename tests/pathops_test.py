@@ -1,7 +1,6 @@
 from pathops import (
     Path,
     PathPen,
-    PathPenIterator,
     OpenPathError,
     OpBuilder,
     PathOp,
@@ -64,7 +63,7 @@ class PathTest(object):
         pen.curveTo((2, 2), (3, 3), (4, 4))
         pen.endPath()
 
-        assert list(PathPenIterator(path)) == [
+        assert list(path.segments) == [
             ('moveTo', ((0.0, 0.0),)),
             ('endPath', ()),
             ('moveTo', ((1.0, 0.0),)),
@@ -96,10 +95,8 @@ class PathTest(object):
         assert items[2][0] == PathVerb.QUAD
         assert items[2][1] == ((2.0, 2.0), (3.0, 3.0))
 
-        result = list(PathPenIterator(path))
-
         # when drawn back onto a SegmentPen, the implicit on-curves are omitted
-        assert result == [
+        assert list(path.segments) == [
             ('moveTo', ((0.0, 0.0),)),
             ('qCurveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
             ('closePath', ())]
@@ -111,8 +108,7 @@ class PathTest(object):
         pen.moveTo((100, 100))
         pen.lineTo((100, 200))
         pen.closePath()
-        result = list(PathPenIterator(path))
-        assert result == [
+        assert list(path.segments) == [
             ('moveTo', ((100.0, 100.0),)),
             ('lineTo', ((100.0, 200.0),)),
             # ('lineTo', ((100.0, 100.0),)),
@@ -169,7 +165,7 @@ class OpBuilderTest(object):
         builder.add(path2, PathOp.UNION)
         result = builder.resolve()
 
-        assert list(PathPenIterator(result)) == [
+        assert list(result.segments) == [
             ('moveTo', ((5316.0, 4590.0),)),
             ('lineTo', ((5220.0, 4590.0),)),
             ('lineTo', ((5220.0, 4866.92333984375),)),
@@ -441,17 +437,18 @@ def test_reverse_path(operations, expected):
 
     path.reverse()
 
-    assert list(PathPenIterator(path)) == expected
-
+    assert list(path.segments) == expected
 
 
 def assert_approx_equal_paths(path1, path2):
-    assert path1.verbs == path2.verbs
-    points1 = path1.points
-    points2 = path2.points
-    assert len(points1) == len(points2)
-    for pt1, pt2 in zip(points1, points2):
-        assert pt1 == pytest.approx(pt2, rel=1e-3)
+    segments1 = list(path1.segments)
+    segments2 = list(path2.segments)
+    assert len(segments1) == len(segments2)
+    for (op1, args1), (op2, args2) in zip(segments1, segments2):
+        assert op1 == op2
+        assert len(args1) == len(args2)
+        for pt1, pt2 in zip(args1, args2):
+            assert pt1 == pytest.approx(pt2, rel=1e-3)
 
 
 def test_duplicate_start_point():

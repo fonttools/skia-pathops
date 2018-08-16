@@ -154,7 +154,7 @@ cdef class RawPathIterator:
     cdef SkPath.RawIter iterator
 
 
-cdef class PathPenIterator:
+cdef class SegmentPenIterator:
 
     cdef _SkPointArray pa
     cdef SkPoint *pts
