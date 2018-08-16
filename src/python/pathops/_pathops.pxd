@@ -61,6 +61,11 @@ cdef bint can_normalize(SkScalar dx, SkScalar dy)
 cdef bint points_almost_equal(const SkPoint& p1, const SkPoint& p2)
 
 
+cdef bint is_middle_point(
+    const SkPoint& p1, const SkPoint& p2, const SkPoint& p3
+)
+
+
 cdef class Path:
 
     cdef SkPath path
@@ -148,7 +153,18 @@ cdef class RawPathIterator:
     cdef Path path
     cdef SkPath.RawIter iterator
 
-    cpdef PathVerb peek(self)
+
+cdef class PathPenIterator:
+
+    cdef _SkPointArray pa
+    cdef SkPoint *pts
+    cdef _VerbArray va
+    cdef uint8_t *verbs
+    cdef uint8_t *verb_stop
+    cdef SkPoint move_pt
+    cdef bint closed
+
+    cdef tuple _join_quadratic_segments(self)
 
 
 cdef class PathPen:
@@ -210,9 +226,6 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=*) except False
 
 
 cdef list decompose_quadratic_segment(tuple points)
-
-
-cdef list join_quadratic_segments(list quad_segments)
 
 
 cdef int find_oncurve_point(

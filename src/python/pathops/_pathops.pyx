@@ -109,6 +109,14 @@ def test_points_almost_equal(tuple p1, tuple p2):
     return points_almost_equal(sp1, sp2)
 
 
+cdef inline bint is_middle_point(
+    const SkPoint& p1, const SkPoint& p2, const SkPoint& p3
+):
+    cdef SkScalar midx = (p1.x() + p3.x()) / 2.0
+    cdef SkScalar midy = (p1.y() + p3.y()) / 2.0
+    return not can_normalize(p2.x() - midx, p2.y() - midy)
+
+
 cdef class Path:
 
     def __init__(self, other=None, fillType=None):
@@ -201,41 +209,12 @@ cdef class Path:
         self.path.rewind()
 
     cpdef draw(self, pen):
-        cdef PathVerb verb
+        cdef str method
         cdef tuple pts
-        cdef list quads
-        cdef bint closed = True
-        cdef RawPathIterator iterator = iter(self)
+        cdef PathPenIterator iterator = PathPenIterator(self)
 
-        for verb, pts in iterator:
-            try:
-                method = getattr(pen, PEN_METHODS[verb])
-            except KeyError:
-                raise UnsupportedVerbError(PathVerb(verb).name)
-
-            if verb is PathVerb.MOVE:
-                if not closed:
-                    # skia contours starting with "moveTo" are implicitly
-                    # open, unless they end with a "close" verb
-                    pen.endPath()
-                closed = False
-            elif verb is PathVerb.CLOSE:
-                closed = True
-            elif verb is PathVerb.QUAD:
-                # try concatenating multiple quadratics with implied oncurves
-                if iterator.peek() is PathVerb.QUAD:
-                    quads = [pts]
-                    while iterator.peek() is PathVerb.QUAD:
-                        quads.append(next(iterator)[1])
-                    quads = join_quadratic_segments(quads)
-                    for pts in quads:
-                        method(*pts)
-                    continue
-
-            method(*pts)
-
-        if not closed:
-            pen.endPath()
+        for method, pts in iterator:
+            getattr(pen, method)(*pts)
 
     def dump(self, cpp=False, as_hex=False):
         # print a text repesentation to stdout
@@ -553,8 +532,98 @@ cdef class RawPathIterator:
 
         return (PathVerb(verb), pts)
 
-    cpdef PathVerb peek(self):
-        return PathVerb(self.iterator.peek())
+
+cdef tuple NO_POINTS = ()
+cdef tuple END_PATH = ("endPath", NO_POINTS)
+cdef tuple CLOSE_PATH = ("closePath", NO_POINTS)
+
+
+cdef class PathPenIterator:
+
+    def __cinit__(self, Path path):
+        self.pa = _SkPointArray.create(path.path)
+        self.pts = self.pa.data
+        self.va = _VerbArray.create(path.path)
+        self.verbs = self.va.data - 1
+        self.verb_stop = self.va.data + self.va.count
+        self.move_pt = SkPoint.Make(.0, .0)
+        self.closed = True
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        cdef tuple points
+        cdef uint8_t verb
+
+        self.verbs += 1
+        if self.verbs >= self.verb_stop:
+            if not self.closed:
+                self.closed = True
+                return END_PATH
+            else:
+                raise StopIteration()
+        else:
+            verb = self.verbs[0]
+
+        if verb == kMove_Verb:
+            # skia contours are implicitly open, unless they end with "close"
+            if not self.closed:
+                self.closed = True
+                self.verbs -= 1
+                return END_PATH
+            self.move_pt = self.pts[0]
+            self.closed = False
+            points = ((self.pts[0].x(), self.pts[0].y()),)
+            self.pts += 1
+        elif verb == kClose_Verb:
+            self.closed = True
+            return CLOSE_PATH
+        elif verb == kLine_Verb:
+            # XXX handle collinear points here
+            points = ((self.pts[0].x(), self.pts[0].y()),)
+            self.pts += 1
+        elif verb == kQuad_Verb:
+            points = self._join_quadratic_segments()
+        elif verb == kCubic_Verb:
+            points = (
+                (self.pts[0].x(), self.pts[0].y()),
+                (self.pts[1].x(), self.pts[1].y()),
+                (self.pts[2].x(), self.pts[2].y()),
+            )
+            self.pts += 3
+        else:
+            raise UnsupportedVerbError(PathVerb(verb).name)
+
+        cdef str method = PEN_METHODS[verb]
+        return (method, points)
+
+    cdef tuple _join_quadratic_segments(self):
+        # assert self.verbs < self.verb_stop and self.verbs[0] == kQuad_Verb
+
+        cdef uint8_t *verbs = self.verbs
+        cdef uint8_t *next_verb_ptr
+        cdef SkPoint *pts = self.pts
+
+        cdef list points = []
+
+        while True:
+            points.append((pts[0].x(), pts[0].y()))
+            next_verb_ptr = verbs + 1
+            if (
+                next_verb_ptr == self.verb_stop
+                or next_verb_ptr[0] != kQuad_Verb
+                or not is_middle_point(pts[0], pts[1], pts[2])
+            ):
+                points.append((pts[1].x(), pts[1].y()))
+                pts += 2
+                break
+            verbs = next_verb_ptr
+            pts += 2
+
+        self.verbs = verbs
+        self.pts = pts
+        return tuple(points)
 
 
 cdef class PathPen:
@@ -908,29 +977,6 @@ cdef list decompose_quadratic_segment(tuple points):
         quad_segments.append((points[i], implied_pt))
     quad_segments.append((points[-2], points[-1]))
     return quad_segments
-
-
-cdef list join_quadratic_segments(list quad_segments):
-    cdef:
-        int i
-        list new_segments, points
-        SkScalar off1x, off1y, onx, ony, off2x, off2y, midx, midy
-
-    new_segments = []
-    points = []
-    for i in range(len(quad_segments) - 1):
-        (off1x, off1y), (onx, ony) = quad_segments[i]
-        (off2x, off2y), _ = quad_segments[i + 1]
-        points.append((off1x, off1y))
-        # skip oncurve if equal to midpoint between two consecutive offcurves
-        midx = (off1x + off2x) / 2
-        midy = (off1y + off2y) / 2
-        if can_normalize(onx - midx, ony - midy):
-            points.append((onx, ony))
-            new_segments.append(tuple(points))
-            del points[:]
-    new_segments.append(tuple(points) + quad_segments[-1])
-    return new_segments
 
 
 cdef int find_oncurve_point(
