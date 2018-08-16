@@ -440,69 +440,154 @@ def test_reverse_path(operations, expected):
     assert list(path.segments) == expected
 
 
-def assert_approx_equal_paths(path1, path2):
-    segments1 = list(path1.segments)
-    segments2 = list(path2.segments)
-    assert len(segments1) == len(segments2)
-    for (op1, args1), (op2, args2) in zip(segments1, segments2):
-        assert op1 == op2
-        assert len(args1) == len(args2)
-        for pt1, pt2 in zip(args1, args2):
-            assert pt1 == pytest.approx(pt2, rel=1e-3)
-
-
 def test_duplicate_start_point():
     # https://github.com/fonttools/skia-pathops/issues/13
     path = Path()
-    path.moveTo(177.0, 258.0)
-    path.lineTo(200.0, 269.0)
-    path.cubicTo(200.0, 356.0, 250.0, 410.0, 400.0, 410.0)
-    path.cubicTo(550.0, 410.0, 600.0, 356.0, 600.0, 269.0)
-    path.lineTo(600.0, 257.0)
-    path.cubicTo(600.0, 179.0, 580.0, 78.0, 410.0, 78.0)
-    path.cubicTo(240.0, 78.0, 200.0, 159.0, 200.0, 277.0)
-    path.lineTo(200.0, 519.0)
-    path.cubicTo(200.0, 636.0, 230.0, 720.0, 400.0, 720.0)
-    path.cubicTo(531.0, 720.0, 564.0, 686.0, 582.0, 603.0)
-    path.lineTo(691.0, 626.0)
-    path.cubicTo(664.0, 757.0, 581.0, 810.0, 401.0, 810.0)
-    path.cubicTo(181.0, 810.0, 100.0, 696.0, 100.0, 519.0)
-    path.lineTo(100.0, 277.0)
-    path.cubicTo(100.0, 102.0, 190.0, -10.0, 410.0, -10.0)
-    path.cubicTo(630.0, -10.0, 700.0, 115.0, 700.0, 250.0)
-    path.lineTo(700.0, 272.0)
-    path.cubicTo(700.0, 419.0, 601.0, 500.0, 401.0, 500.0)
-    path.cubicTo(201.0, 500.0, 150.0, 416.0, 150.0, 269.0)
-    path.lineTo(177.0, 258.0)
+    path.moveTo(
+        bits2float(0x43480000),  # 200
+        bits2float(0x43db8ce9),  # 439.101
+    )
+    path.lineTo(
+        bits2float(0x43480000),  # 200
+        bits2float(0x4401c000),  # 519
+    )
+    path.cubicTo(
+        bits2float(0x43480000),  # 200
+        bits2float(0x441f0000),  # 636
+        bits2float(0x43660000),  # 230
+        bits2float(0x44340000),  # 720
+        bits2float(0x43c80000),  # 400
+        bits2float(0x44340000),  # 720
+    )
+    path.cubicTo(
+        bits2float(0x4404c000),  # 531
+        bits2float(0x44340000),  # 720
+        bits2float(0x440d0000),  # 564
+        bits2float(0x442b8000),  # 686
+        bits2float(0x44118000),  # 582
+        bits2float(0x4416c000),  # 603
+    )
+    path.lineTo(
+        bits2float(0x442cc000),  # 691
+        bits2float(0x441c8000),  # 626
+    )
+    path.cubicTo(
+        bits2float(0x44260000),  # 664
+        bits2float(0x443d4000),  # 757
+        bits2float(0x44114000),  # 581
+        bits2float(0x444a8000),  # 810
+        bits2float(0x43c88000),  # 401
+        bits2float(0x444a8000),  # 810
+    )
+    path.cubicTo(
+        bits2float(0x43350000),  # 181
+        bits2float(0x444a8000),  # 810
+        bits2float(0x42c80000),  # 100
+        bits2float(0x442e0000),  # 696
+        bits2float(0x42c80000),  # 100
+        bits2float(0x4401c000),  # 519
+    )
+    path.lineTo(
+        bits2float(0x42c80000),  # 100
+        bits2float(0x438a8000),  # 277
+    )
+    path.cubicTo(
+        bits2float(0x42c80000),  # 100
+        bits2float(0x42cc0000),  # 102
+        bits2float(0x433e0000),  # 190
+        bits2float(0xc1200000),  # -10
+        bits2float(0x43cd0000),  # 410
+        bits2float(0xc1200000),  # -10
+    )
+    path.cubicTo(
+        bits2float(0x441d8000),  # 630
+        bits2float(0xc1200000),  # -10
+        bits2float(0x442f0000),  # 700
+        bits2float(0x42e60000),  # 115
+        bits2float(0x442f0000),  # 700
+        bits2float(0x437a0000),  # 250
+    )
+    path.lineTo(
+        bits2float(0x442f0000),  # 700
+        bits2float(0x43880000),  # 272
+    )
+    path.cubicTo(
+        bits2float(0x442f0000),  # 700
+        bits2float(0x43d18000),  # 419
+        bits2float(0x44164000),  # 601
+        bits2float(0x43fa0000),  # 500
+        bits2float(0x43c88000),  # 401
+        bits2float(0x43fa0000),  # 500
+    )
+    path.cubicTo(
+        bits2float(0x43964752),  # 300.557
+        bits2float(0x43fa0000),  # 500
+        bits2float(0x436db1ed),  # 237.695
+        bits2float(0x43ef6824),  # 478.814
+        bits2float(0x43480000),  # 200
+        bits2float(0x43db8ce9),  # 439.101
+    )
+    path.close()
+    path.moveTo(
+        bits2float(0x434805cb),  # 200.023
+        bits2float(0x43881798),  # 272.184
+    )
+    path.cubicTo(
+        bits2float(0x43493da4),  # 201.241
+        bits2float(0x43b2a869),  # 357.316
+        bits2float(0x437bd6b1),  # 251.839
+        bits2float(0x43cd0000),  # 410
+        bits2float(0x43c80000),  # 400
+        bits2float(0x43cd0000),  # 410
+    )
+    path.cubicTo(
+        bits2float(0x44098000),  # 550
+        bits2float(0x43cd0000),  # 410
+        bits2float(0x44160000),  # 600
+        bits2float(0x43b20000),  # 356
+        bits2float(0x44160000),  # 600
+        bits2float(0x43868000),  # 269
+    )
+    path.lineTo(
+        bits2float(0x44160000),  # 600
+        bits2float(0x43808000),  # 257
+    )
+    path.cubicTo(
+        bits2float(0x44160000),  # 600
+        bits2float(0x43330000),  # 179
+        bits2float(0x44110000),  # 580
+        bits2float(0x429c0000),  # 78
+        bits2float(0x43cd0000),  # 410
+        bits2float(0x429c0000),  # 78
+    )
+    path.cubicTo(
+        bits2float(0x43725298),  # 242.323
+        bits2float(0x429c0000),  # 78
+        bits2float(0x43491e05),  # 201.117
+        bits2float(0x431ccd43),  # 156.802
+        bits2float(0x434805cb),  # 200.023
+        bits2float(0x43881797),  # 272.184
+    )
     path.close()
 
-    path.simplify()
+    contours = list(path.contours)
 
-    expected = Path()
-    expected.moveTo(200.0, 439.1)
-    expected.lineTo(200.0, 519.0)
-    expected.cubicTo(200.0, 636.0, 230.0, 720.0, 400.0, 720.0)
-    expected.cubicTo(531.0, 720.0, 564.0, 686.0, 582.0, 603.0)
-    expected.lineTo(691.0, 626.0)
-    expected.cubicTo(664.0, 757.0, 581.0, 810.0, 401.0, 810.0)
-    expected.cubicTo(181.0, 810.0, 100.0, 696.0, 100.0, 519.0)
-    expected.lineTo(100.0, 277.0)
-    expected.cubicTo(100.0, 102.0, 190.0, -10.0, 410.0, -10.0)
-    expected.cubicTo(630.0, -10.0, 700.0, 115.0, 700.0, 250.0)
-    expected.lineTo(700.0, 272.0)
-    expected.cubicTo(700.0, 419.0, 601.0, 500.0, 401.0, 500.0)
-    expected.cubicTo(300.557, 500.0, 237.695, 478.814, 200.0, 439.1)
-    expected.close()
-    expected.moveTo(200.023, 272.184)
-    expected.cubicTo(201.24, 357.316, 251.839, 410.0, 400.0, 410.0)
-    expected.cubicTo(550.0, 410.0, 600.0, 356.0, 600.0, 269.0)
-    expected.lineTo(600.0, 257.0)
-    expected.cubicTo(600.0, 179.0, 580.0, 78.0, 410.0, 78.0)
-    expected.cubicTo(242.323, 78.0, 201.117, 156.802, 200.023, 272.184)
-    # expected.lineTo(200.023, 272.184)  # this should not be present
-    expected.close()
+    # on the second contour, the last and first points' Y coordinate only
+    # differ by one bit: 0x43881798 != 0x43881797
+    points = contours[1].points
+    assert points[0] != points[-1]
+    assert points[0] == pytest.approx(points[-1])
 
-    assert_approx_equal_paths(path, expected)
+    # when "drawn" as segments, almost equal last/first points are treated
+    # as exactly equal, without the need of an extra closing lineTo
+    for contour in path.contours:
+        segments = list(contour.segments)
+        assert segments[-1][0] == "closePath"
+        first_type, first_pts = segments[0]
+        last_type, last_pts = segments[-2]
+        assert first_type == "moveTo"
+        assert last_type == "curveTo"
+        assert last_pts[-1] == first_pts[-1]
 
 
 def test_float2bits():
