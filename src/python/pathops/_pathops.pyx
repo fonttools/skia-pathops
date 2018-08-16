@@ -336,7 +336,7 @@ cdef class Path:
         if not verbs:
             raise MemoryError()
         try:
-            assert self.path.getVerbs(verbs, count) == count
+            self.path.getVerbs(verbs, count)
             return [PathVerb(verbs[i]) for i in range(count)]
         finally:
             PyMem_Free(verbs)
@@ -353,7 +353,7 @@ cdef class Path:
         if not pts:
             raise MemoryError()
         try:
-            assert self.path.getPoints(pts, count) == count
+            self.path.getPoints(pts, count)
             return [(pts[i].x(), pts[i].y()) for i in range(count)]
         finally:
             PyMem_Free(pts)
