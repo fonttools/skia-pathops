@@ -97,18 +97,6 @@ cdef inline bint points_almost_equal(const SkPoint& p1, const SkPoint& p2):
     return not can_normalize(p1.x() - p2.x(), p1.y() - p2.y())
 
 
-def test_points_almost_equal(tuple p1, tuple p2):
-    """
-    >>> test_points_almost_equal((0, 0), (0, 0.001))
-    False
-    >>> test_points_almost_equal((0, 0), (0, 0.0001))
-    True
-    """
-    cdef SkPoint sp1 = SkPoint.Make(p1[0], p1[1])
-    cdef SkPoint sp2 = SkPoint.Make(p2[0], p2[1])
-    return points_almost_equal(sp1, sp2)
-
-
 cdef inline bint is_middle_point(
     const SkPoint& p1, const SkPoint& p2, const SkPoint& p3
 ):
