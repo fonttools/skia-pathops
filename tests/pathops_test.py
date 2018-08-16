@@ -1,6 +1,7 @@
 from pathops import (
     Path,
     PathPen,
+    PathPenIterator,
     OpenPathError,
     OpBuilder,
     PathOp,
@@ -54,7 +55,6 @@ class PathTest(object):
         path.draw(path2.getPen())
 
     def test_allow_open_contour(self):
-        rec = RecordingPen()
         path = Path()
         pen = path.getPen()
         pen.moveTo((0, 0))
@@ -63,8 +63,8 @@ class PathTest(object):
         pen.lineTo((1, 1))
         pen.curveTo((2, 2), (3, 3), (4, 4))
         pen.endPath()
-        path.draw(rec)
-        assert rec.value == [
+
+        assert list(PathPenIterator(path)) == [
             ('moveTo', ((0.0, 0.0),)),
             ('endPath', ()),
             ('moveTo', ((1.0, 0.0),)),
@@ -74,7 +74,6 @@ class PathTest(object):
         ]
 
     def test_raise_open_contour_error(self):
-        rec = RecordingPen()
         path = Path()
         pen = path.getPen(allow_open_paths=False)
         pen.moveTo((0, 0))
@@ -82,7 +81,6 @@ class PathTest(object):
             pen.endPath()
 
     def test_decompose_join_quadratic_segments(self):
-        rec = RecordingPen()
         path = Path()
         pen = path.getPen()
         pen.moveTo((0, 0))
@@ -98,24 +96,23 @@ class PathTest(object):
         assert items[2][0] == PathVerb.QUAD
         assert items[2][1] == ((2.0, 2.0), (3.0, 3.0))
 
-        path.draw(rec)
+        result = list(PathPenIterator(path))
 
         # when drawn back onto a SegmentPen, the implicit on-curves are omitted
-        assert rec.value == [
+        assert result == [
             ('moveTo', ((0.0, 0.0),)),
             ('qCurveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
             ('closePath', ())]
 
     def test_last_implicit_lineTo(self):
         # https://github.com/fonttools/skia-pathops/issues/6
-        rec = RecordingPen()
         path = Path()
         pen = path.getPen()
         pen.moveTo((100, 100))
         pen.lineTo((100, 200))
         pen.closePath()
-        path.draw(rec)
-        assert rec.value == [
+        result = list(PathPenIterator(path))
+        assert result == [
             ('moveTo', ((100.0, 100.0),)),
             ('lineTo', ((100.0, 200.0),)),
             # ('lineTo', ((100.0, 100.0),)),
@@ -172,9 +169,7 @@ class OpBuilderTest(object):
         builder.add(path2, PathOp.UNION)
         result = builder.resolve()
 
-        rec = RecordingPen()
-        result.draw(rec)
-        assert rec.value == [
+        assert list(PathPenIterator(result)) == [
             ('moveTo', ((5316.0, 4590.0),)),
             ('lineTo', ((5220.0, 4590.0),)),
             ('lineTo', ((5220.0, 4866.92333984375),)),
@@ -446,9 +441,7 @@ def test_reverse_path(operations, expected):
 
     path.reverse()
 
-    recpen = RecordingPen()
-    path.draw(recpen)
-    assert recpen.value == expected
+    assert list(PathPenIterator(path)) == expected
 
 
 

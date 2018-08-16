@@ -450,7 +450,6 @@ setup_params = dict(
             "coverage >= 4.5.1, <5",
             "pytest-xdist >= 1.22.2, <2",
             "pytest-randomly >= 1.2.3, <2",
-            "fonttools >= 3.19",
         ],
     },
     zip_safe=False,
