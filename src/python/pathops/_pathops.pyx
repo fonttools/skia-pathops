@@ -74,7 +74,7 @@ cdef inline float _bits2float(int32_t float_as_bits):
     return data.Float
 
 
-def bits2float(long float_as_bits):
+def bits2float(long long float_as_bits):
     """
     >>> bits2float(0x418c0000)
     17.5
