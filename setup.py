@@ -79,6 +79,7 @@ class custom_build_ext(build_ext):
                 compiler_directives={
                     "linetrace": linetrace,
                     "language_level": 3,
+                    "embedsignature": True,
                 })
 
         build_ext.finalize_options(self)
