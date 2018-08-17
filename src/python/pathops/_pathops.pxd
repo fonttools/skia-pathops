@@ -75,8 +75,6 @@ cdef class Path:
 
     cpdef PathPen getPen(self, bint allow_open_paths=*)
 
-    cpdef bint add(self, PathVerb verb, tuple pts) except False
-
     cpdef void moveTo(self, SkScalar x, SkScalar y)
 
     cpdef void lineTo(self, SkScalar x, SkScalar y)

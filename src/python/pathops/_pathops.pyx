@@ -140,7 +140,7 @@ cdef class Path:
     def __iter__(self):
         return RawPathIterator(self)
 
-    cpdef bint add(self, PathVerb verb, tuple pts) except False:
+    def add(self, PathVerb verb, *pts):
         if verb is PathVerb.MOVE:
             self.path.moveTo(pts[0][0], pts[0][1])
         elif verb is PathVerb.LINE:
@@ -158,8 +158,7 @@ cdef class Path:
         elif verb is PathVerb.CLOSE:
             self.path.close()
         else:
-            raise AssertionError(verb)
-        return True
+            raise UnsupportedVerbError(verb)
 
     cpdef void moveTo(self, SkScalar x, SkScalar y):
         self.path.moveTo(x, y)

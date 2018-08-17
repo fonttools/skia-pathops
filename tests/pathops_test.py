@@ -184,148 +184,148 @@ class OpBuilderTest(object):
 TEST_DATA = [
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('lineTo', ((2, 2),)),
-            ('lineTo', ((3, 3),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.LINE, ((2, 2),)),
+            (PathVerb.LINE, ((3, 3),)),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((3, 3),)),
-            ('lineTo', ((2, 2),)),
-            ('lineTo', ((1, 1),)),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ())
+            (PathVerb.MOVE, ((3, 3),)),
+            (PathVerb.LINE, ((2, 2),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ())
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('lineTo', ((2, 2),)),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.LINE, ((2, 2),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((2, 2),)),
-            ('lineTo', ((1, 1),)),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ())
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((2, 2),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ())
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('lineTo', ((2, 2),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.LINE, ((2, 2),)),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((2, 2),)),
-            ('lineTo', ((1, 1),)),
-            ('lineTo', ((0, 0),)),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((2, 2),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((1, 1),)),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((1, 1),)),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('curveTo', ((1, 1), (2, 2), (3, 3))),
-            ('curveTo', ((4, 4), (5, 5), (0, 0))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CUBIC, ((1, 1), (2, 2), (3, 3))),
+            (PathVerb.CUBIC, ((4, 4), (5, 5), (0, 0))),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('curveTo', ((5, 5), (4, 4), (3, 3))),
-            ('curveTo', ((2, 2), (1, 1), (0, 0))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CUBIC, ((5, 5), (4, 4), (3, 3))),
+            (PathVerb.CUBIC, ((2, 2), (1, 1), (0, 0))),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('curveTo', ((1, 1), (2, 2), (3, 3))),
-            ('curveTo', ((4, 4), (5, 5), (6, 6))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CUBIC, ((1, 1), (2, 2), (3, 3))),
+            (PathVerb.CUBIC, ((4, 4), (5, 5), (6, 6))),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((6, 6),)),
-            ('curveTo', ((5, 5), (4, 4), (3, 3))),
-            ('curveTo', ((2, 2), (1, 1), (0, 0))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((6, 6),)),
+            (PathVerb.CUBIC, ((5, 5), (4, 4), (3, 3))),
+            (PathVerb.CUBIC, ((2, 2), (1, 1), (0, 0))),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('curveTo', ((2, 2), (3, 3), (4, 4))),
-            ('curveTo', ((5, 5), (6, 6), (7, 7))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.CUBIC, ((2, 2), (3, 3), (4, 4))),
+            (PathVerb.CUBIC, ((5, 5), (6, 6), (7, 7))),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((7, 7),)),
-            ('curveTo', ((6, 6), (5, 5), (4, 4))),
-            ('curveTo', ((3, 3), (2, 2), (1, 1))),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((7, 7),)),
+            (PathVerb.CUBIC, ((6, 6), (5, 5), (4, 4))),
+            (PathVerb.CUBIC, ((3, 3), (2, 2), (1, 1))),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('qCurveTo', ((1, 1), (2.5, 2.5))),
-            ('qCurveTo', ((3, 3), (0, 0))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.QUAD, ((1, 1), (2.5, 2.5))),
+            (PathVerb.QUAD, ((3, 3), (0, 0))),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('qCurveTo', ((3, 3), (2.5, 2.5))),
-            ('qCurveTo', ((1, 1), (0, 0))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.QUAD, ((3, 3), (2.5, 2.5))),
+            (PathVerb.QUAD, ((1, 1), (0, 0))),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('qCurveTo', ((1, 1), (2.5, 2.5))),
-            ('qCurveTo', ((3, 3), (4, 4))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.QUAD, ((1, 1), (2.5, 2.5))),
+            (PathVerb.QUAD, ((3, 3), (4, 4))),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((4, 4),)),
-            ('qCurveTo', ((3, 3), (2.5, 2.5))),
-            ('qCurveTo', ((1, 1), (0, 0))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((4, 4),)),
+            (PathVerb.QUAD, ((3, 3), (2.5, 2.5))),
+            (PathVerb.QUAD, ((1, 1), (0, 0))),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('qCurveTo', ((2, 2), (3, 3))),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.QUAD, ((2, 2), (3, 3))),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((3, 3),)),
-            ('qCurveTo', ((2, 2), (1, 1))),
-            ('lineTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((3, 3),)),
+            (PathVerb.QUAD, ((2, 2), (1, 1))),
+            (PathVerb.LINE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ]
     ),
     (
@@ -333,111 +333,114 @@ TEST_DATA = [
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('endPath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('endPath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
         ],
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ],
         [
-            ('moveTo', ((0, 0),)),
-            ('closePath', ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CLOSE, ()),
         ],
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('endPath', ())
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
         ],
         [
-            ('moveTo', ((1, 1),)),
-            ('lineTo', ((0, 0),)),
-            ('endPath', ())
+            (PathVerb.MOVE, ((1, 1),)),
+            (PathVerb.LINE, ((0, 0),)),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('curveTo', ((1, 1), (2, 2), (3, 3))),
-            ('endPath', ())
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CUBIC, ((1, 1), (2, 2), (3, 3))),
         ],
         [
-            ('moveTo', ((3, 3),)),
-            ('curveTo', ((2, 2), (1, 1), (0, 0))),
-            ('endPath', ())
+            (PathVerb.MOVE, ((3, 3),)),
+            (PathVerb.CUBIC, ((2, 2), (1, 1), (0, 0))),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('curveTo', ((1, 1), (2, 2), (3, 3))),
-            ('lineTo', ((4, 4),)),
-            ('endPath', ())
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.CUBIC, ((1, 1), (2, 2), (3, 3))),
+            (PathVerb.LINE, ((4, 4),)),
         ],
         [
-            ('moveTo', ((4, 4),)),
-            ('lineTo', ((3, 3),)),
-            ('curveTo', ((2, 2), (1, 1), (0, 0))),
-            ('endPath', ())
+            (PathVerb.MOVE, ((4, 4),)),
+            (PathVerb.LINE, ((3, 3),)),
+            (PathVerb.CUBIC, ((2, 2), (1, 1), (0, 0))),
         ]
     ),
     (
         [
-            ('moveTo', ((0, 0),)),
-            ('lineTo', ((1, 1),)),
-            ('curveTo', ((2, 2), (3, 3), (4, 4))),
-            ('endPath', ())
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((1, 1),)),
+            (PathVerb.CUBIC, ((2, 2), (3, 3), (4, 4))),
         ],
         [
-            ('moveTo', ((4, 4),)),
-            ('curveTo', ((3, 3), (2, 2), (1, 1))),
-            ('lineTo', ((0, 0),)),
-            ('endPath', ())
+            (PathVerb.MOVE, ((4, 4),)),
+            (PathVerb.CUBIC, ((3, 3), (2, 2), (1, 1))),
+            (PathVerb.LINE, ((0, 0),)),
         ]
     ),
     # Test case from:
     # https://github.com/googlei18n/cu2qu/issues/51#issue-179370514
     (
         [
-            ('moveTo', ((848, 348),)),
-            ('lineTo', ((848, 348),)),  # duplicate lineTo point after moveTo
-            ('qCurveTo', ((848, 526), (649, 704), (449, 704))),
-            ('qCurveTo', ((449, 704), (248, 704), (50, 526), (50, 348))),
-            ('lineTo', ((50, 348),)),
-            ('qCurveTo', ((50, 348), (50, 171), (248, -3), (449, -3))),
-            ('qCurveTo', ((449, -3), (649, -3), (848, 171), (848, 348))),
-            ('closePath', ())
+            (PathVerb.MOVE, ((848, 348),)),
+            (PathVerb.LINE, ((848, 348),)),  # duplicate lineTo point after moveTo
+            (PathVerb.QUAD, ((848, 526), (748.5, 615))),
+            (PathVerb.QUAD, ((649, 704), (449, 704))),
+            (PathVerb.QUAD, ((449, 704), (348.5, 704))),
+            (PathVerb.QUAD, ((248, 704), (149, 615))),
+            (PathVerb.QUAD, ((50, 526), (50, 348))),
+            (PathVerb.LINE, ((50, 348),)),
+            (PathVerb.QUAD, ((50, 348), (50, 259.5))),
+            (PathVerb.QUAD, ((50, 171), (149, 84))),
+            (PathVerb.QUAD, ((248, -3), (449, -3))),
+            (PathVerb.QUAD, ((449, -3), (549, -3))),
+            (PathVerb.QUAD, ((649, -3), (748.5, 84))),
+            (PathVerb.QUAD, ((848, 171), (848, 348))),
+            (PathVerb.CLOSE, ())
         ],
         [
-            ('moveTo', ((848, 348),)),
-            ('qCurveTo', ((848, 171), (649, -3), (449, -3), (449, -3))),
-            ('qCurveTo', ((248, -3), (50, 171), (50, 348), (50, 348))),
-            ('lineTo', ((50, 348),)),
-            ('qCurveTo', ((50, 526), (248, 704), (449, 704), (449, 704))),
-            ('qCurveTo', ((649, 704), (848, 526), (848, 348))),
-            ('lineTo', ((848, 348),)),  # the duplicate point is kept
-            ('closePath', ())
+            (PathVerb.MOVE, ((848, 348),)),
+            (PathVerb.QUAD, ((848, 171), (748.5, 84))),
+            (PathVerb.QUAD, ((649, -3), (549, -3))),
+            (PathVerb.QUAD, ((449, -3), (449, -3))),
+            (PathVerb.QUAD, ((248, -3), (149, 84))),
+            (PathVerb.QUAD, ((50, 171), (50, 259.5))),
+            (PathVerb.QUAD, ((50, 348), (50, 348))),
+            (PathVerb.LINE, ((50, 348),)),
+            (PathVerb.QUAD, ((50, 526), (149, 615))),
+            (PathVerb.QUAD, ((248, 704), (348.5, 704))),
+            (PathVerb.QUAD, ((449, 704), (449, 704))),
+            (PathVerb.QUAD, ((649, 704), (748.5, 615))),
+            (PathVerb.QUAD, ((848, 526), (848, 348))),
+            (PathVerb.LINE, ((848, 348),)),  # the duplicate point is kept
+            (PathVerb.CLOSE, ())
         ]
     )
 ]
 @pytest.mark.parametrize("operations, expected", TEST_DATA)
 def test_reverse_path(operations, expected):
     path = Path()
-    pen = path.getPen()
-    for operator, operands in operations:
-        getattr(pen, operator)(*operands)
+    for verb, pts in operations:
+        path.add(verb, *pts)
 
     path.reverse()
 
-    assert list(path.segments) == expected
+    assert list(path) == expected
 
 
 def test_duplicate_start_point():
