@@ -2,7 +2,7 @@ environment:
   TOXENV: "py"
   TWINE_USERNAME: "anthrotype"
   TWINE_PASSWORD:
-    secure: 3MYRWT1R2pwRunaCYHAqlQ==
+    secure: 9L/DdqoIILlN7qCh0lotvA==
   matrix:
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7"
