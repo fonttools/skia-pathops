@@ -946,12 +946,14 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
     The outermost contours are set to counter-clockwise direction, unless
     'truetype' is True.
     """
-    if AsWinding(path.path, &path.path):
-        if path.clockwise ^ truetype:
-            path.reverse()
-        return True
-
-    # in the unlikely event the built-in method fails, try our naive approach
+    # TODO re-enable this once the new feature is stabilized in upstream skia
+    # https://github.com/fonttools/skia-pathops/issues/10
+    # if AsWinding(path.path, &path.path):
+    #     if path.clockwise ^ truetype:
+    #         path.reverse()
+    #     return True
+    #
+    # # in the unlikely event the built-in method fails, try our naive approach
 
     cdef int i, j
     cdef bint inverse = not truetype
