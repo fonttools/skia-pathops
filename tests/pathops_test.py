@@ -53,6 +53,8 @@ class PathTest(object):
         path2 = Path()
         path.draw(path2.getPen())
 
+        assert path == path2
+
     def test_allow_open_contour(self):
         path = Path()
         pen = path.getPen()
