@@ -19,6 +19,7 @@ from ._skia.core cimport (
 from ._skia.pathops cimport (
     Op,
     Simplify,
+    AsWinding,
     SkOpBuilder,
     SkPathOp,
     kDifference_SkPathOp,
@@ -945,6 +946,13 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
     The outermost contours are set to counter-clockwise direction, unless
     'truetype' is True.
     """
+    if AsWinding(path.path, &path.path):
+        if path.clockwise ^ truetype:
+            path.reverse()
+        return True
+
+    # in the unlikely event the built-in method fails, try our naive approach
+
     cdef int i, j
     cdef bint inverse = not truetype
     cdef bint is_clockwise, is_even
@@ -1206,12 +1214,12 @@ cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
         first_points = path.firstPoints
     cdef Path result = Path()
     if Simplify(path.path, &result.path):
-        return result
+        raise PathOpsError("operation did not succeed")
     if fix_winding:
         winding_from_even_odd(result)
     if keep_starting_points:
         restore_starting_points(result, first_points)
-    raise PathOpsError("operation did not succeed")
+    return result
 
 
 cdef class OpBuilder:
@@ -1228,13 +1236,13 @@ cdef class OpBuilder:
 
     cpdef Path resolve(self):
         cdef Path result = Path()
-        if self.builder.resolve(&result.path):
-            if self.fix_winding:
-                winding_from_even_odd(result)
-            if self.keep_starting_points:
-                restore_starting_points(result, self.first_points)
-            return result
-        raise PathOpsError("operation did not succeed")
+        if not self.builder.resolve(&result.path):
+            raise PathOpsError("operation did not succeed")
+        if self.fix_winding:
+            winding_from_even_odd(result)
+        if self.keep_starting_points:
+            restore_starting_points(result, self.first_points)
+        return result
 
 
 # Doctests
