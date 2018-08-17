@@ -116,6 +116,20 @@ cdef inline bint collinear(
     ) <= 2 * SK_ScalarNearlyZero
 
 
+def test_collinear(p1, p2, p3):
+    """
+    >>> test_collinear((0.0, 0.0), (1.0, 1.0), (2.0, 2.0001))
+    True
+    >>> test_collinear((0.0, 0.0), (1.0, 1.0), (2.0, 2.001))
+    False
+    """
+    cdef SkPoint sp1, sp2, sp3
+    sp1 = SkPoint.Make(p1[0], p1[1])
+    sp2 = SkPoint.Make(p2[0], p2[1])
+    sp3 = SkPoint.Make(p3[0], p3[1])
+    return collinear(sp1, sp2, sp3)
+
+
 def _format_hex_coords(floats):
     floats = list(floats)
     if not floats:

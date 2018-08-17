@@ -451,6 +451,7 @@ setup_params = dict(
             "coverage >= 4.5.1, <5",
             "pytest-xdist >= 1.22.2, <2",
             "pytest-randomly >= 1.2.3, <2",
+            "pytest-cython >= 0.1.0",
         ],
     },
     zip_safe=False,
