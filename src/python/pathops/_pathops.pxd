@@ -167,7 +167,7 @@ cdef class SegmentPenIterator:
     cdef SkPoint move_pt
     cdef bint closed
 
-    cdef bint _next_verb_is(self, uint8_t verb)
+    cdef uint8_t peek(self)
 
     cdef tuple _join_quadratic_segments(self)
 

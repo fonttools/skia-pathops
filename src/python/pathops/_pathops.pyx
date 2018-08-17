@@ -593,7 +593,7 @@ cdef class SegmentPenIterator:
         elif verb == kLine_Verb:
             # XXX handle collinear points here
             if (
-                self._next_verb_is(kClose_Verb)
+                self.peek() == kClose_Verb
                 and points_almost_equal(self.pts[0], self.move_pt)
             ):
                 # skip closing lineTo if contour's last point ~= first
@@ -605,7 +605,7 @@ cdef class SegmentPenIterator:
             points = self._join_quadratic_segments()
         elif verb == kCubic_Verb:
             if (
-                self._next_verb_is(kClose_Verb)
+                self.peek() == kClose_Verb
                 and points_almost_equal(self.pts[2], self.move_pt)
             ):
                 # skip closing lineTo if contour's last point ~= first
@@ -627,11 +627,11 @@ cdef class SegmentPenIterator:
         cdef str method = PEN_METHODS[verb]
         return (method, points)
 
-    cdef inline bint _next_verb_is(self, uint8_t verb):
-        return (
-            self.verbs + 1 < self.verb_stop
-            and (self.verbs + 1)[0] == verb
-        )
+    cdef inline uint8_t peek(self):
+        if self.verbs + 1 < self.verb_stop:
+            return (self.verbs + 1)[0]
+        else:
+            return kDone_Verb
 
     cdef tuple _join_quadratic_segments(self):
         # must only be called when the current verb is kQuad_Verb
