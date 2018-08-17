@@ -604,3 +604,77 @@ def test_bits2float():
     assert bits2float(0x418c0000) == 17.5
     assert bits2float(0xc1200000) == -10.0
     assert bits2float(-0x3ee00000) == -10.0  # this works too
+
+
+def test_strip_collinear_moveTo():
+    # https://github.com/fonttools/skia-pathops/issues/12
+    path = Path()
+    path.moveTo(
+        bits2float(0x440b8000),  # 558
+        bits2float(0x0),  # 0
+    )
+    path.lineTo(
+        bits2float(0x44098000),  # 550
+        bits2float(0x0),  # 0
+    )
+    path.lineTo(
+        bits2float(0x440c247f),  # 560.57
+        bits2float(0x41daf87e),  # 27.3713
+    )
+    path.lineTo(
+        bits2float(0x440e247f),  # 568.57
+        bits2float(0x41daf87e),  # 27.3713
+    )
+    path.close()
+    path.moveTo(
+        bits2float(0x440b0000),  # 556
+        bits2float(0x40e00000),  # 7
+    )
+    path.lineTo(
+        bits2float(0x440a4000),  # 553
+        bits2float(0x0),  # 0
+    )
+    path.lineTo(
+        bits2float(0x44049c26),  # 530.44
+        bits2float(0x0),  # 0
+    )
+    path.lineTo(
+        bits2float(0x44052891),  # 532.634
+        bits2float(0x40e00000),  # 7
+    )
+    path.close()
+
+    path.simplify()
+
+    expected = Path()
+    expected.moveTo(
+        bits2float(0x440b8000),  # 558
+        bits2float(0x0),  # 0
+    )
+    expected.lineTo(
+        bits2float(0x440e247f),  # 568.57
+        bits2float(0x41daf87e),  # 27.3713
+    )
+    expected.lineTo(
+        bits2float(0x440c247f),  # 560.57
+        bits2float(0x41daf87e),  # 27.3713
+    )
+    expected.lineTo(
+        bits2float(0x440a2d02),  # 552.703
+        bits2float(0x40e00000),  # 7
+    )
+    expected.lineTo(
+        bits2float(0x44052891),  # 532.634
+        bits2float(0x40e00000),  # 7
+    )
+    expected.lineTo(
+        bits2float(0x44049c26),  # 530.44
+        bits2float(0x0),  # 0
+    )
+    # expected.lineTo(
+    #     bits2float(0x44098000),  # 550
+    #     bits2float(0x0),  # 0
+    # )
+    expected.close()
+
+    assert list(path) == list(expected)
