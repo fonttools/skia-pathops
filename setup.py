@@ -318,6 +318,7 @@ skia_src = [
     os.path.join(skia_dir, "src", "pathops", "SkOpEdgeBuilder.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkOpSegment.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkOpSpan.cpp"),
+    os.path.join(skia_dir, "src", "pathops", "SkPathOpsAsWinding.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsCommon.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsConic.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsCubic.cpp"),
