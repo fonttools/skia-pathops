@@ -591,7 +591,6 @@ cdef class SegmentPenIterator:
             self.closed = True
             return CLOSE_PATH
         elif verb == kLine_Verb:
-            # XXX handle collinear points here
             if (
                 self.peek() == kClose_Verb
                 and points_almost_equal(self.pts[0], self.move_pt)
@@ -1131,11 +1130,32 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
         n = pts_in_verb(v)
         assert pi + n <= pt_count
         if v == kMove_Verb:
-            if last[0] != pts[pi]:
+            # the moveTo from the original contour is converted to a lineTo,
+            # unless it's equal to the previous point, or collinear between
+            # the last oncuve point and the next line segment
+            # https://github.com/fonttools/skia-pathops/issues/12
+            if (
+                points_almost_equal(last[0], pts[pi])
+                or (
+                    verbs[(vi + 1) % verb_count] == kLine_Verb
+                    and collinear(last[0], pts[pi], pts[(pi + 1) % pt_count])
+                )
+            ):
+                pass
+            else:
                 path.lineTo(pts[pi])
+                last = pts + pi
         elif v == kLine_Verb:
-            path.lineTo(pts[pi])
-            last = pts + pi
+            # skip adding lineTo if it's the last segment from the original
+            # contour and overlaps with the old moveTo point
+            if (
+                verbs[(vi + 1) % verb_count] == kClose_Verb
+                and points_almost_equal(pts[pi], pts[(pi + 1) % pt_count])
+            ):
+                pass
+            else:
+                path.lineTo(pts[pi])
+                last = pts + pi
         elif v == kQuad_Verb:
             path.quadTo(pts[pi], pts[pi + 1])
             last = pts + pi + 1
