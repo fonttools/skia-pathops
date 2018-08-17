@@ -105,6 +105,17 @@ cdef inline bint is_middle_point(
     return not can_normalize(p2.x() - midx, p2.y() - midy)
 
 
+cdef inline bint collinear(
+    const SkPoint& p1, const SkPoint& p2, const SkPoint& p3
+):
+    # the area of a triangle is zero iff the three vertices are collinear
+    return fabs(
+        p1.x() * (p2.y() - p3.y()) +
+        p2.x() * (p3.y() - p1.y()) +
+        p3.x() * (p1.y() - p2.y())
+    ) <= 2 * SK_ScalarNearlyZero
+
+
 def _format_hex_coords(floats):
     floats = list(floats)
     if not floats:

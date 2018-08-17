@@ -66,6 +66,11 @@ cdef bint is_middle_point(
 )
 
 
+cdef bint collinear(
+    const SkPoint& p1, const SkPoint& p2, const SkPoint& p3
+)
+
+
 cdef class Path:
 
     cdef SkPath path
