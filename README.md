@@ -20,6 +20,13 @@ A recent version of [Cython](https://github.com/cython/cython) is
 required to build the package (see the `pyproject.toml` file for
 the minimum required version).
 
-For developers we recommend installing in editable mode using
-`pip install -e .`, and compiling the extension module in the same
-source directory.
+For developers we recommend installing in editable mode, and 
+compiling the extension module in the same source directory:
+
+    git clone https://github.com/fonttools/skia-pathops.git
+    cd skia-pathops
+    pip install -e .
+    
+If this fails, try upgrading pip to v18 or later, and try again:
+
+    pip3 install --upgrade pip
