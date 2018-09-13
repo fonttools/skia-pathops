@@ -6,6 +6,13 @@ Python bindings for the [Google Skia](https://skia.org) library's [Path
 Ops](https://skia.org/dev/present/pathops) module, performing boolean
 operations on paths (intersection, union, difference, xor).
 
+Install
+=======
+
+To install or update to the latest released package, run:
+
+    pip3 install --upgrade skia-pathops
+
 Build
 =====
 
