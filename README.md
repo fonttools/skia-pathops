@@ -23,7 +23,7 @@ the minimum required version).
 For developers we recommend installing in editable mode, and 
 compiling the extension module in the same source directory:
     
-    git clone --recurse-submodules https://github.com/fonttools/skia-pathops.git
+    git clone --recursive https://github.com/fonttools/skia-pathops.git
     cd skia-pathops
     pip install -e .
     
