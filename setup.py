@@ -363,6 +363,7 @@ include_dirs = [
     os.path.join(skia_dir, 'src', 'core'),
     os.path.join(skia_dir, 'src', 'opts'),
     os.path.join(skia_dir, 'src', 'shaders'),
+    os.path.join(skia_dir),
 ]
 
 extra_compile_args = {
