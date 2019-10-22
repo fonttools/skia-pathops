@@ -1,5 +1,6 @@
 env:
   global:
+    - DOCKER_IMAGE=tstenner/manylinux:gcc9.1.0
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _test_ project
