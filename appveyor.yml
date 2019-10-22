@@ -54,7 +54,7 @@ install:
   - pip --version
 
   # upgrade setuptools and virtualenv
-  - pip install --upgrade setuptools virtualenv
+  - pip install --upgrade setuptools wheel virtualenv
 
   # install tox to run test suite in a virtual environment
   - pip install --upgrade tox
