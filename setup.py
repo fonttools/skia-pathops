@@ -326,7 +326,6 @@ skia_src = [
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsDebug.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsLine.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsOp.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsPoint.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsQuad.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsRect.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsSimplify.cpp"),
