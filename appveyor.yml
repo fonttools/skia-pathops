@@ -1,3 +1,7 @@
+image: Visual Studio 2017
+platform: x64
+configuration: Release
+
 environment:
   TOXENV: "py"
   TWINE_USERNAME: "anthrotype"
