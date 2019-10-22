@@ -367,7 +367,7 @@ include_dirs = [
 
 extra_compile_args = {
     '': [
-        '-std=c++0x',
+        '-std=c++14',
     ] + ([
         # extra flags needed on macOS for C++11
         "-stdlib=libc++",
