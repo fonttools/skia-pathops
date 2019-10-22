@@ -372,7 +372,7 @@ extra_compile_args = {
     ] + ([
         # extra flags needed on macOS for C++11
         "-stdlib=libc++",
-        "-mmacosx-version-min=10.7",
+        "-mmacosx-version-min=10.9",
     ] if platform.system() == "Darwin" else []),
     "msvc": [
         "/EHsc",
