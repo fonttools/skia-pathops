@@ -326,7 +326,6 @@ skia_src = [
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsDebug.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsLine.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsOp.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsPoint.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsQuad.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsRect.cpp"),
     os.path.join(skia_dir, "src", "pathops", "SkPathOpsSimplify.cpp"),
@@ -364,15 +363,16 @@ include_dirs = [
     os.path.join(skia_dir, 'src', 'core'),
     os.path.join(skia_dir, 'src', 'opts'),
     os.path.join(skia_dir, 'src', 'shaders'),
+    os.path.join(skia_dir),
 ]
 
 extra_compile_args = {
     '': [
-        '-std=c++0x',
+        '-std=c++14',
     ] + ([
         # extra flags needed on macOS for C++11
         "-stdlib=libc++",
-        "-mmacosx-version-min=10.7",
+        "-mmacosx-version-min=10.9",
     ] if platform.system() == "Darwin" else []),
     "msvc": [
         "/EHsc",

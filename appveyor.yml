@@ -1,14 +1,13 @@
+image: Visual Studio 2017
+platform: x64
+configuration: Release
+
 environment:
   TOXENV: "py"
   TWINE_USERNAME: "anthrotype"
   TWINE_PASSWORD:
     secure: 9L/DdqoIILlN7qCh0lotvA==
   matrix:
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-      DISTUTILS_COMPILER: "mingw32"
-
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
@@ -24,11 +23,6 @@ environment:
     - PYTHON: "C:\\Python37"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
-      DISTUTILS_COMPILER: "mingw32"
 
 
 init:
@@ -60,13 +54,13 @@ install:
   - pip --version
 
   # upgrade setuptools and virtualenv
-  - pip install --upgrade setuptools virtualenv
+  - pip install --upgrade setuptools wheel virtualenv
 
   # install tox to run test suite in a virtual environment
   - pip install --upgrade tox
 
   # build wheel
-  - tox -e wheel
+  - pip wheel --no-deps --wheel-dir dist .
   # get the full path to the compiled wheel (ugly but works)
   - dir /s /b dist\skia_pathops*.whl > wheel.pth
   - set /p WHEEL_PATH=<wheel.pth
