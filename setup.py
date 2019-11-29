@@ -44,8 +44,6 @@ if ({"build",
         "error: the required Cython >= %s was not found" % cython_min_version
     )
 
-needs_pytest = {'pytest', 'test'}.intersection(argv)
-pytest_runner = ['pytest_runner'] if needs_pytest else []
 needs_wheel = {'bdist_wheel'}.intersection(argv)
 wheel = ['wheel'] if needs_wheel else []
 
@@ -83,16 +81,6 @@ class custom_build_ext(build_ext):
                 })
 
         build_ext.finalize_options(self)
-
-        if self.compiler is None:
-            # we use this variable with tox to build using GCC on Windows.
-            # https://bitbucket.org/hpk42/tox/issues/274/specify-compiler
-            self.compiler = os.environ.get("DISTUTILS_COMPILER", None)
-        if self.compiler == "mingw32":
-            # workaround for virtualenv changing order of libary_dirs on
-            # Windows, which makes gcc fail to link with the correct libpython
-            # https://github.com/mingwpy/mingwpy.github.io/issues/31
-            self.library_dirs.insert(0, os.path.join(sys.exec_prefix, 'libs'))
 
     def build_extension(self, ext):
         sources = ext.sources
@@ -385,12 +373,6 @@ shared_macros = [
 ]
 define_macros = {
     "": shared_macros,
-    # On Windows Python 2.7, pyconfig.h defines "hypot" as "_hypot",
-    # This clashes with GCC's cmath, and causes compilation errors when
-    # building under MinGW: http://bugs.python.org/issue11566
-    "mingw32": shared_macros + [
-        ("_hypot", "hypot"),
-    ],
 }
 
 libraries = [
@@ -443,18 +425,19 @@ setup_params = dict(
         'build_ext': custom_build_ext,
         'build_clib': custom_build_clib,
     },
-    setup_requires=["setuptools_scm"] + pytest_runner + wheel,
+    setup_requires=["setuptools_scm"] + wheel,
     install_requires=[
     ],
     extras_require={
         "testing": [
-            "pytest >= 3.0.0, <4",
-            "coverage >= 4.5.1, <5",
-            "pytest-xdist >= 1.22.2, <2",
-            "pytest-randomly >= 1.2.3, <2",
-            "pytest-cython >= 0.1.0",
+            "pytest",
+            "coverage",
+            "pytest-xdist",
+            "pytest-randomly",
+            "pytest-cython",
         ],
     },
+    python_requires=">3.6",
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -463,7 +446,6 @@ setup_params = dict(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
         "Topic :: Multimedia :: Graphics",
         "Topic :: Multimedia :: Graphics :: Graphics Conversion",
