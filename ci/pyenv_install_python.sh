@@ -2,7 +2,7 @@
 # Script to install a specific version of Python from source using pyenv.
 # This is meant to be run from inside the manylinux1 docker container.
 
-set -ex
+set -x
 
 version=${PYENV_PYTHON_VERSION:-3.8.0}
 multibuild_root=${MULTIBUILD_ROOT:-multibuild}
