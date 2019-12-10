@@ -43,7 +43,7 @@ matrix:
         - MB_PYTHON_OSX_VER=10.9
 
 before_install:
-  - [ -n "$PYENV_PYTHON_VERSION" ] && echo "export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION" > env_vars.sh
+  - ./ci/dump_env_vars.sh
   - source multibuild/common_utils.sh
   - source multibuild/travis_steps.sh
   - before_install
