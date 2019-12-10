@@ -23,11 +23,12 @@ matrix:
     - os: linux
       env:
         - MB_PYTHON_VERSION=3.7
-    # disable this until I figure out how to build for c++14 on old CentOS5 image
-    # https://github.com/pypa/manylinux/issues/118#issuecomment-559860939
-    # - os: linux
-    #   env:
-    #     - MB_PYTHON_VERSION=3.8
+    # for 3.8 we build our own python because the the custom gcc9.1.0 docker image
+    # doesn't contain one yet, and I haven't figured out how to modify it.
+    - os: linux
+      env:
+        - MB_PYTHON_VERSION=3.7
+        - PYENV_PYTHON_VERSION=3.8.0
     - os: osx
       env:
         - MB_PYTHON_VERSION=3.6

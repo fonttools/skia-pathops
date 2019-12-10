@@ -8,6 +8,8 @@ function pre_build {
         export CFLAGS="-static-libstdc++"
         export CC=/usr/local/gcc-9.1.0/bin/gcc-9.1.0
         export CXX=/usr/local/gcc-9.1.0/bin/g++-9.1.0
+
+        [ -n "$PYENV_PYTHON_VERSION" ] && source ci/pyenv_install_python.sh
     fi
 }
 
