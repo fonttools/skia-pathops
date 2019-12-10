@@ -23,7 +23,7 @@ matrix:
     - os: linux
       env:
         - MB_PYTHON_VERSION=3.7
-    # for 3.8 we build our own python because the the custom gcc9.1.0 docker image
+    # for 3.8 we build our own python because the custom gcc9.1.0 docker image
     # doesn't contain one yet, and I haven't figured out how to modify it.
     - os: linux
       env:
