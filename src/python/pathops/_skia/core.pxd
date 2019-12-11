@@ -4,7 +4,16 @@ from libc.stdint cimport uint8_t
 ctypedef float SkScalar
 
 
-cdef extern from "SkPath.h":
+cdef extern from "include/core/SkPathTypes.h":
+
+    enum SkPathFillType:
+        kWinding "SkPathFillType::kWinding",
+        kEvenOdd "SkPathFillType::kEvenOdd",
+        kInverseWinding "SkPathFillType::kInverseWinding",
+        kInverseEvenOdd "SkPathFillType::kInverseEvenOdd"
+
+
+cdef extern from "include/core/SkPath.h":
 
     cdef cppclass SkPoint:
 
@@ -58,8 +67,8 @@ cdef extern from "SkPath.h":
 
         void rewind()
 
-        void setFillType(FillType ft)
-        FillType getFillType()
+        void setFillType(SkPathFillType ft)
+        SkPathFillType getFillType()
 
         # TODO also expose optional AddPathMode enum
         void addPath(const SkPath& src) except +
@@ -91,11 +100,6 @@ cdef extern from "SkPath.h":
             Iter() except +
             Iter(const SkPath& path, bint forceClose) except +
 
-            Verb next(SkPoint pts[4],
-                      bint doConsumeDegenerates,
-                      bint exact)
-            Verb next(SkPoint pts[4],
-                      bint doConsumeDegenerates)
             Verb next(SkPoint pts[4])
 
             SkScalar conicWeight()
@@ -127,14 +131,8 @@ cdef extern from * namespace "SkPath":
         kClose_Verb,
         kDone_Verb
 
-    enum FillType:
-        kWinding_FillType,
-        kEvenOdd_FillType,
-        kInverseWinding_FillType,
-        kInverseEvenOdd_FillType
 
-
-cdef extern from "SkRect.h":
+cdef extern from "include/core/SkRect.h":
 
     cdef cppclass SkRect:
 
@@ -147,7 +145,7 @@ cdef extern from "SkRect.h":
         bint Intersects(const SkRect& a, const SkRect& b)
 
 
-cdef extern from "SkScalar.h":
+cdef extern from "include/core/SkScalar.h":
 
     cdef enum:
         SK_ScalarNearlyZero

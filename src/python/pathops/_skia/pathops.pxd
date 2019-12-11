@@ -1,7 +1,7 @@
 from .core cimport SkPath
 
 
-cdef extern from "SkPathOps.h":
+cdef extern from "include/pathops/SkPathOps.h":
 
     enum SkPathOp:
         kDifference_SkPathOp,            # subtract the op path from the first path

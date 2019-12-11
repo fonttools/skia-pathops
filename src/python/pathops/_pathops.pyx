@@ -1,5 +1,6 @@
 from ._skia.core cimport (
     SkPath,
+    SkPathFillType,
     SkPoint,
     SkScalar,
     SkRect,
@@ -10,10 +11,6 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
-    kWinding_FillType,
-    kEvenOdd_FillType,
-    kInverseWinding_FillType,
-    kInverseEvenOdd_FillType,
     SK_ScalarNearlyZero,
 )
 from ._skia.pathops cimport (
@@ -278,11 +275,12 @@ cdef class Path:
 
     @property
     def fillType(self):
-        return FillType(self.path.getFillType())
+        return FillType(<uint32_t>self.path.getFillType())
 
     @fillType.setter
     def fillType(self, value):
-        self.path.setFillType(FillType(value))
+        cdef uint32_t fill = int(FillType(value))
+        self.path.setFillType(<SkPathFillType>fill)
 
     @property
     def isConvex(self):
@@ -430,7 +428,7 @@ cdef class Path:
     @property
     def contours(self):
         cdef SkPath temp
-        cdef SkPath.FillType fillType = self.path.getFillType()
+        cdef SkPathFillType fillType = self.path.getFillType()
 
         temp.setFillType(fillType)
 
@@ -727,7 +725,7 @@ cdef double get_path_area(const SkPath& path) except? -1234567:
 
     p0 = start_point = SkPoint.Make(.0, .0)
     while True:
-        verb = iterator.next(p, False)
+        verb = iterator.next(p)
         if verb == kMove_Verb:
             p0 = start_point = p[0]
         elif verb == kLine_Verb:
@@ -1019,7 +1017,7 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
         contour = contours[i]
         path.path.addPath(contour.path)
 
-    path.path.setFillType(kWinding_FillType)
+    path.path.setFillType(SkPathFillType.kWinding)
     return True
 
 
@@ -1116,7 +1114,7 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
         reverse_contour(path)
         return 1
 
-    cdef SkPath.FillType fill = path.getFillType()
+    cdef SkPathFillType fill = path.getFillType()
     path.rewind()
     path.setFillType(fill)
 
