@@ -1,6 +1,6 @@
 env:
   global:
-    - DOCKER_IMAGE=tstenner/manylinux:gcc9.1.0
+    - DOCKER_IMAGE=anthrotype/manylinux:gcc9.1.0
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _test_ project
@@ -23,12 +23,9 @@ matrix:
     - os: linux
       env:
         - MB_PYTHON_VERSION=3.7
-    # for 3.8 we build our own python because the custom gcc9.1.0 docker image
-    # doesn't contain one yet, and I haven't figured out how to modify it.
     - os: linux
       env:
-        - MB_PYTHON_VERSION=3.7
-        - PYENV_PYTHON_VERSION=3.8.0
+        - MB_PYTHON_VERSION=3.8
     - os: osx
       env:
         - MB_PYTHON_VERSION=3.6
@@ -43,7 +40,6 @@ matrix:
         - MB_PYTHON_OSX_VER=10.9
 
 before_install:
-  - ./ci/dump_env_vars.sh
   - source multibuild/common_utils.sh
   - source multibuild/travis_steps.sh
   - before_install
@@ -52,11 +48,6 @@ install:
   - build_wheel $REPO_DIR $PLAT
 
 script:
-  - |
-    if [ -n "$PYENV_PYTHON_VERSION" ]; then
-      export MB_PYTHON_VERSION="${PYENV_PYTHON_VERSION%.*}"
-      export PYTHON_VERSION="$MB_PYTHON_VERSION"
-    fi
   - install_run $PLAT
 
 after_success:
