@@ -8,14 +8,6 @@ function pre_build {
         export CFLAGS="-static-libstdc++"
         export CC=/usr/local/gcc-9.1.0/bin/gcc-9.1.0
         export CXX=/usr/local/gcc-9.1.0/bin/g++-9.1.0
-
-        if [ -n "$PYENV_PYTHON_VERSION" ]; then
-            echo "Installing Python: $PYENV_PYTHON_VERSION"
-            bash ci/pyenv_install_python.sh
-            export PATH="$HOME/.pyenv/versions/$PYENV_PYTHON_VERSION/bin":$PATH
-            python --version
-            pip --version
-        fi
     fi
 }
 
