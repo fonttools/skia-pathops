@@ -4,6 +4,15 @@ from libc.stdint cimport uint8_t
 ctypedef float SkScalar
 
 
+cdef extern from "include/core/SkPathTypes.h":
+
+    enum SkPathFillType:
+        kWinding "SkPathFillType::kWinding",
+        kEvenOdd "SkPathFillType::kEvenOdd",
+        kInverseWinding "SkPathFillType::kInverseWinding",
+        kInverseEvenOdd "SkPathFillType::kInverseEvenOdd"
+
+
 cdef extern from "include/core/SkPath.h":
 
     cdef cppclass SkPoint:
@@ -58,8 +67,8 @@ cdef extern from "include/core/SkPath.h":
 
         void rewind()
 
-        void setFillType(FillType ft)
-        FillType getFillType()
+        void setFillType(SkPathFillType ft)
+        SkPathFillType getFillType()
 
         # TODO also expose optional AddPathMode enum
         void addPath(const SkPath& src) except +
@@ -121,12 +130,6 @@ cdef extern from * namespace "SkPath":
         kCubic_Verb,
         kClose_Verb,
         kDone_Verb
-
-    enum FillType:
-        kWinding_FillType,
-        kEvenOdd_FillType,
-        kInverseWinding_FillType,
-        kInverseEvenOdd_FillType
 
 
 cdef extern from "include/core/SkRect.h":

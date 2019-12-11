@@ -1,5 +1,6 @@
 from ._skia.core cimport (
     SkPath,
+    SkPathFillType,
     SkPoint,
     SkScalar,
     kMove_Verb,
@@ -9,10 +10,6 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
-    kWinding_FillType,
-    kEvenOdd_FillType,
-    kInverseWinding_FillType,
-    kInverseEvenOdd_FillType,
 )
 from ._skia.pathops cimport (
     SkOpBuilder,
@@ -23,7 +20,7 @@ from ._skia.pathops cimport (
     kXOR_SkPathOp,
     kReverseDifference_SkPathOp,
 )
-from libc.stdint cimport uint8_t, int32_t
+from libc.stdint cimport uint8_t, int32_t, uint32_t
 
 
 cpdef enum PathOp:
@@ -35,10 +32,10 @@ cpdef enum PathOp:
 
 
 cpdef enum FillType:
-    WINDING = kWinding_FillType
-    EVEN_ODD = kEvenOdd_FillType
-    INVERSE_WINDING = kInverseWinding_FillType
-    INVERSE_EVEN_ODD = kInverseEvenOdd_FillType
+    WINDING = <uint32_t>SkPathFillType.kWinding
+    EVEN_ODD = <uint32_t>SkPathFillType.kEvenOdd
+    INVERSE_WINDING = <uint32_t>SkPathFillType.kInverseWinding
+    INVERSE_EVEN_ODD = <uint32_t>SkPathFillType.kInverseEvenOdd
 
 
 cdef union FloatIntUnion:

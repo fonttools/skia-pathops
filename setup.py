@@ -362,7 +362,6 @@ extra_compile_args = {
 
 shared_macros = [
     ("SK_SUPPORT_GPU", "0"),
-    ("SK_SUPPORT_LEGACY_PATH_FILLTYPE_ENUM", "1"),
 ]
 define_macros = {
     "": shared_macros,
