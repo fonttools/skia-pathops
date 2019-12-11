@@ -727,7 +727,7 @@ cdef double get_path_area(const SkPath& path) except? -1234567:
 
     p0 = start_point = SkPoint.Make(.0, .0)
     while True:
-        verb = iterator.next(p, False)
+        verb = iterator.next(p)
         if verb == kMove_Verb:
             p0 = start_point = p[0]
         elif verb == kLine_Verb:

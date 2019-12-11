@@ -278,7 +278,9 @@ skia_src = [
     os.path.join(skia_dir, "src", "core", "SkBuffer.cpp"),
     os.path.join(skia_dir, "src", "core", "SkCubicClipper.cpp"),
     os.path.join(skia_dir, "src", "core", "SkData.cpp"),
+    os.path.join(skia_dir, "src", "core", "SkEdgeClipper.cpp"),
     os.path.join(skia_dir, "src", "core", "SkGeometry.cpp"),
+    os.path.join(skia_dir, "src", "core", "SkLineClipper.cpp"),
     os.path.join(skia_dir, "src", "core", "SkMath.cpp"),
     os.path.join(skia_dir, "src", "core", "SkMatrix.cpp"),
     os.path.join(skia_dir, "src", "core", "SkPath.cpp"),
@@ -342,17 +344,7 @@ elif os.name == "posix":
 else:
     raise RuntimeError("unsupported OS: %r" % os.name)
 
-include_dirs = [
-    os.path.join(skia_dir, 'include', 'config'),
-    os.path.join(skia_dir, 'include', 'core'),
-    os.path.join(skia_dir, 'include', 'pathops'),
-    os.path.join(skia_dir, 'include', 'private'),
-    os.path.join(skia_dir, 'include', 'gpu'),
-    os.path.join(skia_dir, 'src', 'core'),
-    os.path.join(skia_dir, 'src', 'opts'),
-    os.path.join(skia_dir, 'src', 'shaders'),
-    os.path.join(skia_dir),
-]
+include_dirs = [os.path.join(skia_dir)]
 
 extra_compile_args = {
     '': [
@@ -370,6 +362,7 @@ extra_compile_args = {
 
 shared_macros = [
     ("SK_SUPPORT_GPU", "0"),
+    ("SK_SUPPORT_LEGACY_PATH_FILLTYPE_ENUM", "1"),
 ]
 define_macros = {
     "": shared_macros,
