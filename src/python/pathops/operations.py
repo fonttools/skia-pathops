@@ -1,6 +1,7 @@
 from functools import partial
 from . import Path, PathOp, op
 
+__all__ = [op.name.lower() for op in PathOp]
 
 def _draw(contours):
     path = Path()
