@@ -1,8 +1,12 @@
 #!/bin/bash
-# Run this script as `source ./build_skia.sh`.
-# This way the LD_LIBRARY_PATH environment variable is imported in the current shell.
-# NOTE: This was only tested on macOS. It requires python2 to be on the $PATH and
-# it must be run *outside* of a python3 venv otherwise gn tool will complain...
+# NOTE: This requires python2 and virtualenv
+
+if [ ! -d "venv2" ]; then
+    python2 -m virtualenv venv2
+fi
+source venv2/bin/activate
+
+pip install ninja
 
 pushd src/cpp/skia
 
@@ -12,6 +16,6 @@ bin/gn gen out/Shared --args='is_official_build=true is_component_build=true is_
 
 ninja -C out/Shared
 
-export LD_LIBRARY_PATH=$(pwd)/out/Shared
-
 popd
+
+deactivate
