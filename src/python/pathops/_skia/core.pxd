@@ -154,7 +154,7 @@ cdef extern from "include/core/SkStrokeRec.h":
     cdef cppclass SkStrokeRec:
         SkStrokeRec(InitStyle style)
 
-        void setStrokeStyle(SkScalar width, bint strokeAndFill = false)
+        void setStrokeStyle(SkScalar width, bint strokeAndFill)
 
         bint applyToPath(SkPath* dst, const SkPath& src) const;
 

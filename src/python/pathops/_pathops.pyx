@@ -337,7 +337,7 @@ cdef class Path:
     cpdef stroke(self, width):
         stroke_rec = new SkStrokeRec(kFill_InitStyle)
         try:
-             stroke_rec.setStrokeStyle(width)
+             stroke_rec.setStrokeStyle(width, False)
              stroke_rec.applyToPath(&self.path, self.path)
         finally:
             del stroke_rec
