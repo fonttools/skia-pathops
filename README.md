@@ -6,6 +6,23 @@ Python bindings for the [Google Skia](https://skia.org) library's [Path
 Ops](https://skia.org/dev/present/pathops) module, performing boolean
 operations on paths (intersection, union, difference, xor).
 
+
+TEMPORARY: BUILD
+================
+```shell
+
+Temporary:
+
+```shell
+# setup and activate a py2 venv
+pip install ninja
+source ./build_skia.sh
+deactivate
+# activate py3 venv
+python setup.py build_ext --inplace
+pip install -e .
+```
+
 Install
 =======
 
