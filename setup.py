@@ -390,6 +390,8 @@ extensions = [
         define_macros=define_macros,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
+        libraries=["skia"],
+        library_dirs=["src/cpp/skia/out/Shared"],
         language="c++",
     ),
 ]
@@ -411,7 +413,7 @@ setup_params = dict(
     license="BSD-3-Clause",
     package_dir={"": pkg_dir},
     packages=find_packages(pkg_dir),
-    libraries=libraries,
+    # libraries=libraries,
     ext_modules=extensions,
     cmdclass={
         'build_ext': custom_build_ext,
