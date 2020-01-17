@@ -3,6 +3,7 @@ from ._skia.core cimport (
     SkPathFillType,
     SkPoint,
     SkScalar,
+    SkStrokeRec,
     SkRect,
     kMove_Verb,
     kLine_Verb,
@@ -11,6 +12,7 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
+    kFill_InitStyle,
     SK_ScalarNearlyZero,
 )
 from ._skia.pathops cimport (
@@ -331,6 +333,14 @@ cdef class Path:
             winding_from_even_odd(self)
         if keep_starting_points:
             restore_starting_points(self, first_points)
+
+    cpdef stroke(self, width):
+        stroke_rec = new SkStrokeRec(kFill_InitStyle)
+        try:
+             stroke_rec.setStrokeStyle(width)
+             stroke_rec.applyToPath(&self.path, self.path)
+        finally:
+            del stroke_rec
 
     cdef list getVerbs(self):
         cdef int i, count

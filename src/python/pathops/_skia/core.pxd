@@ -149,3 +149,16 @@ cdef extern from "include/core/SkScalar.h":
 
     cdef enum:
         SK_ScalarNearlyZero
+
+cdef extern from "include/core/SkStrokeRec.h":
+    cdef cppclass SkStrokeRec:
+        SkStrokeRec(InitStyle style)
+
+        void setStrokeStyle(SkScalar width, bint strokeAndFill = false)
+
+        bint applyToPath(SkPath* dst, const SkPath& src) const;
+
+cdef extern from * namespace "SkStrokeRec":
+    enum InitStyle:
+        kHairline_InitStyle,
+        kFill_InitStyle

@@ -122,6 +122,8 @@ cdef class Path:
 
     cpdef simplify(self, bint fix_winding=*, keep_starting_points=*)
 
+    cpdef stroke(self, width)
+
     cdef list getVerbs(self)
 
     cdef list getPoints(self)

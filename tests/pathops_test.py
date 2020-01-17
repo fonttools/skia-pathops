@@ -689,3 +689,12 @@ def test_strip_collinear_moveTo():
     expected.close()
 
     assert list(path) == list(expected)
+
+#TODO parameterize
+def test_stroke_path():
+    path = Path()
+    path.moveTo(5, 5)
+    path.lineTo(10, 5)
+    path.stroke(2)
+
+    # TODO assert
