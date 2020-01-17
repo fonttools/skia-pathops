@@ -14,10 +14,10 @@ TEMPORARY: BUILD
 Temporary:
 
 ```shell
-# setup and activate a py2 venv
-pip install ninja
-source ./build_skia.sh
-deactivate
+# build Skia library
+./build_skia.sh
+# make sure the runtime linker can find it
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/src/cpp/skia/out/Shared
 # activate py3 venv
 python setup.py build_ext --inplace
 pip install -e .
