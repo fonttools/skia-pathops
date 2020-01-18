@@ -690,11 +690,31 @@ def test_strip_collinear_moveTo():
 
     assert list(path) == list(expected)
 
-#TODO parameterize
-def test_stroke_path():
-    path = Path()
-    path.moveTo(5, 5)
-    path.lineTo(10, 5)
-    path.stroke(2)
 
-    # TODO assert
+@pytest.mark.parametrize(
+    "operations, expected",
+    [
+        # stroke a line 2 units wide
+        (
+            (
+                ('moveTo', (5, 5)),
+                ('lineTo', (10, 5)),
+                ('stroke', (2,)),
+            ),
+            (
+                ('moveTo', ((5., 4.),)),
+                ('lineTo', ((10., 4.),)),
+                ('lineTo', ((10., 6.),)),
+                ('lineTo', ((5., 6.),)),
+                ('lineTo', ((5., 4.),)),
+                ('closePath', ()),
+            ),
+        )
+    ]
+)
+def test_stroke_path(operations, expected):
+    path = Path()
+    for op, args in operations:
+        getattr(path, op)(*args)
+
+    assert tuple(path.segments) == expected
