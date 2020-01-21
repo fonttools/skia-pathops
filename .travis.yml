@@ -1,12 +1,13 @@
 env:
   global:
-    - DOCKER_IMAGE=anthrotype/manylinux:gcc9.2.0
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _test_ project
-    - TEST_DEPENDS="tox"
+    - TEST_DEPENDS="tox pip==19.3.1"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
+    # use 'manylinux2014' since Skia requires C++14 support
+    - MB_ML_VER=2014
     - TWINE_USERNAME="anthrotype"
     - secure: O0cS/1sCRfjuDVdlMihyqyX6b7so3qZ41OhqDC5O5f4bvk87vno9GGk7U0ZfdoUqjnjXLd7QvEnax4vWJx/tvSEh/wJC07U2pcFDNehkYJIEZCf/MQWzESWd905fUSWP1/BbKgCWvfq7WZOH/3iKpDyQP5DKlrnoq3E2H2gYR3xKd7ASAZHtUYariE4bMEnjg4SDANfm7SHnlD5a/S4/IjgxU0DjCKKbkX7HbGUiCAjjr3j3z9amAhxCmoWyOKvNHjKegG2okEb08ERtcbyYWan0Eu5FqCDMkWwhQmACC1lXz0xHyHW4VZWDyQC1cDrSTirN9rNdamTnfqJPP1eURxGNmNqazrem77HAUKIuh5WjXLFZwKzp+KWMb5TTXYWIsh8gx/IAjGfPoi8nKOWd+bxWLeakDM4kka7pLJDsuRnWSWKzDaDDpMuFm76RzDJjTWCsva93l3EZ8/fkXQ3sGrVC7f8MAjaqBEs+vV6YZMv3WZuSfZkv2AVoPLKkPxWB3RDekKjAw/O8qovqDSGHVgV8XU+6AQVEWhEu8dEtEbXn0UPMQ/bSjQeugl5AkmmBC4iIisuP8rtPB+xdV/iQALEM/RdLJHzC76VQNuXMke69roK5+ZhA6TCCix7I3TIq+XtNQ78SnAUGuooND+WHxVVSQ5GK9DGiCMetRlOQkIA=
 

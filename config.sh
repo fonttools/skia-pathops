@@ -4,11 +4,7 @@
 function pre_build {
     # Any stuff that you need to do before you start building the wheels
     # Runs in the root directory of this repository.
-    if [ -z "$IS_OSX" ]; then
-        export CFLAGS="-static-libstdc++"
-        export CC=/usr/local/gcc-9.2.0/bin/gcc-9.2.0
-        export CXX=/usr/local/gcc-9.2.0/bin/g++-9.2.0
-    fi
+    :
 }
 
 function run_tests {

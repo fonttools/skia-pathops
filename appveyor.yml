@@ -7,6 +7,7 @@ environment:
   TWINE_USERNAME: "anthrotype"
   TWINE_PASSWORD:
     secure: 9L/DdqoIILlN7qCh0lotvA==
+  PYTHON2_EXE: "C:\\Python27\\python.exe"
   matrix:
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6"
@@ -58,7 +59,7 @@ install:
   - pip install --upgrade tox
 
   # build wheel
-  - pip wheel --no-deps --wheel-dir dist .
+  - pip wheel -v --no-deps --wheel-dir dist .
   # get the full path to the compiled wheel (ugly but works)
   - dir /s /b dist\skia_pathops*.whl > wheel.pth
   - set /p WHEEL_PATH=<wheel.pth
