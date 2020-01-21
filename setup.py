@@ -273,77 +273,6 @@ pkg_dir = os.path.join("src", "python")
 cpp_dir = os.path.join("src", "cpp")
 skia_dir = os.path.join(cpp_dir, "skia")
 
-skia_src = [
-    os.path.join(skia_dir, "src", "core", "SkArenaAlloc.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkBuffer.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkCubicClipper.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkData.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkEdgeClipper.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkGeometry.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkLineClipper.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkMath.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkMatrix.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkPath.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkPathRef.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkPoint.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkRect.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkRRect.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkSemaphore.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkString.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkStringUtils.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkUtils.cpp"),
-    os.path.join(skia_dir, "src", "core", "SkThreadID.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkAddIntersections.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkDConicLineIntersection.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkDCubicLineIntersection.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkDCubicToQuads.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkDLineIntersection.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkDQuadLineIntersection.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkIntersections.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpAngle.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpBuilder.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpCoincidence.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpContour.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpCubicHull.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpEdgeBuilder.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpSegment.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkOpSpan.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsAsWinding.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsCommon.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsConic.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsCubic.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsCurve.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsDebug.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsLine.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsOp.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsQuad.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsRect.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsSimplify.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsTightBounds.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsTSect.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsTypes.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathOpsWinding.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkPathWriter.cpp"),
-    os.path.join(skia_dir, "src", "pathops", "SkReduceOrder.cpp"),
-    os.path.join(skia_dir, "src", "utils", "SkUTF.cpp"),
-    os.path.join(skia_dir, "src", "ports", "SkDebug_stdio.cpp"),
-    os.path.join(skia_dir, "src", "ports", "SkMemory_malloc.cpp"),
-    os.path.join(skia_dir, "src", "ports", "SkOSFile_stdio.cpp"),
-    os.path.join(cpp_dir, "SkMallocThrow.cpp"),
-]
-
-if os.name == "nt":
-    skia_src += [
-        os.path.join(skia_dir, "src", "ports", "SkDebug_win.cpp"),
-        os.path.join(skia_dir, "src", "ports", "SkOSFile_win.cpp"),
-    ]
-elif os.name == "posix":
-    skia_src += [
-        os.path.join(skia_dir, "src", "ports", "SkOSFile_posix.cpp"),
-    ]
-else:
-    raise RuntimeError("unsupported OS: %r" % os.name)
-
 include_dirs = [os.path.join(skia_dir)]
 
 extra_compile_args = {
@@ -360,24 +289,6 @@ extra_compile_args = {
     ],
 }
 
-shared_macros = [
-    ("SK_SUPPORT_GPU", "0"),
-]
-define_macros = {
-    "": shared_macros,
-}
-
-libraries = [
-    (
-        'skia', {
-            'sources': skia_src,
-            'include_dirs': include_dirs,
-            'cflags': extra_compile_args,
-            'macros': define_macros,
-        },
-    ),
-]
-
 extensions = [
     Extension(
         "pathops._pathops",
@@ -387,11 +298,10 @@ extensions = [
         depends=[
             os.path.join(skia_dir, 'include', 'pathops', 'SkPathOps.h'),
         ],
-        define_macros=define_macros,
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         libraries=["skia"],
-        library_dirs=["src/cpp/skia/out/Shared"],
+        library_dirs=["build/skia"],
         language="c++",
     ),
 ]
@@ -413,7 +323,6 @@ setup_params = dict(
     license="BSD-3-Clause",
     package_dir={"": pkg_dir},
     packages=find_packages(pkg_dir),
-    # libraries=libraries,
     ext_modules=extensions,
     cmdclass={
         'build_ext': custom_build_ext,
