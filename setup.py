@@ -2,11 +2,11 @@
 from __future__ import print_function
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
-from distutils.command.build_clib import build_clib
 from distutils.errors import DistutilsSetupError
 from distutils import log
-from distutils.dep_util import newer_group, newer_pairwise
+from distutils.dep_util import newer_group
 import pkg_resources
+import subprocess
 import sys
 import os
 import platform
@@ -171,102 +171,9 @@ class custom_build_ext(build_ext):
             target_lang=language)
 
     def run(self):
-        # Setuptools `develop` command (used by `pip install -e .`) only calls
-        # `build_ext`, unlike the `install` command which in turn calls `build`
-        # and all its related sub-commands. Linking the Cython extension module
-        # with the Skia static library fails because the `build_clib` command
-        # is not automatically called when doing an editable install.
-        # Here we make sure that `build_clib` command is always run before the
-        # the extension module is compiled, even when doing editable install.
-        # https://github.com/pypa/setuptools/issues/1040
-        self.run_command("build_clib")
+        # make sure libskia.a static library is built before the extension
+        subprocess.run(["python2", "build_skia.py"])
         build_ext.run(self)
-
-
-class custom_build_clib(build_clib):
-    """ Custom build_clib command which allows to pass compiler-specific
-    'macros' and 'cflags' when compiling C libraries.
-
-    In the setup 'libraries' option, the 'macros' and 'cflags' can be
-    provided as dict with the compiler type as the key (e.g. "unix",
-    "mingw32", "msvc") and the value containing the list of macros/cflags.
-    A special empty string '' key may be used for default options that
-    apply to all the other compiler types except for those explicitly
-    listed.
-    """
-
-    def finalize_options(self):
-        build_clib.finalize_options(self)
-        if self.compiler is None:
-            # we use this variable with tox to build using GCC on Windows.
-            # https://bitbucket.org/hpk42/tox/issues/274/specify-compiler
-            self.compiler = os.environ.get("DISTUTILS_COMPILER", None)
-
-    def build_libraries(self, libraries):
-        for (lib_name, build_info) in libraries:
-            sources = build_info.get('sources')
-            if sources is None or not isinstance(sources, (list, tuple)):
-                raise DistutilsSetupError(
-                    "in 'libraries' option (library '%s'), "
-                    "'sources' must be present and must be "
-                    "a list of source filenames" % lib_name)
-            sources = list(sources)
-
-            # detect target language
-            language = self.compiler.detect_language(sources)
-
-            # do compiler specific customizations
-            compiler_type = self.compiler.compiler_type
-
-            # strip compile flags that are not valid for C++ to avoid warnings
-            if compiler_type == "unix" and language == "c++":
-                if "-Wstrict-prototypes" in self.compiler.compiler_so:
-                    self.compiler.compiler_so.remove("-Wstrict-prototypes")
-
-            # get compiler-specific preprocessor definitions
-            macros = build_info.get("macros", [])
-            if isinstance(macros, dict):
-                if compiler_type in macros:
-                    macros = macros[compiler_type]
-                else:
-                    macros = macros.get("", [])
-
-            include_dirs = build_info.get('include_dirs')
-
-            # get compiler-specific compile flags
-            cflags = build_info.get("cflags", [])
-            if isinstance(cflags, dict):
-                if compiler_type in cflags:
-                    cflags = cflags[compiler_type]
-                else:
-                    cflags = cflags.get("", [])
-
-            expected_objects = self.compiler.object_filenames(
-                sources,
-                output_dir=self.build_temp)
-
-            # TODO: also support objects' dependencies
-            if (self.force or
-                    newer_pairwise(sources, expected_objects) != ([], [])):
-                log.info("building '%s' library", lib_name)
-                # compile the source code to object files
-                objects = self.compiler.compile(sources,
-                                                output_dir=self.build_temp,
-                                                macros=macros,
-                                                include_dirs=include_dirs,
-                                                extra_postargs=cflags,
-                                                debug=self.debug)
-            else:
-                log.debug(
-                    "skipping build '%s' objects (up-to-date)" % lib_name)
-                objects = expected_objects
-
-            # Now "link" the object files together into a static library.
-            # (On Unix at least, this isn't really linking -- it just
-            # builds an archive.  Whatever.)
-            self.compiler.create_static_lib(objects, lib_name,
-                                            output_dir=self.build_clib,
-                                            debug=self.debug)
 
 
 pkg_dir = os.path.join("src", "python")
@@ -326,7 +233,6 @@ setup_params = dict(
     ext_modules=extensions,
     cmdclass={
         'build_ext': custom_build_ext,
-        'build_clib': custom_build_clib,
     },
     setup_requires=["setuptools_scm"] + wheel,
     install_requires=[
