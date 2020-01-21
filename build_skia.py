@@ -98,6 +98,12 @@ if __name__ == "__main__":
         nargs="?",
         help="directory where to build libskia (default: %(default)s)",
     )
+    parser.add_argument(
+        "-s",
+        "--shared-lib",
+        action="store_true",
+        help="build a shared library (default: static)"
+    )
     args = parser.parse_args()
 
     build_dir = os.path.abspath(args.build_dir)
@@ -109,12 +115,16 @@ if __name__ == "__main__":
         ["python", os.path.join("tools", "git-sync-deps")], env=env, cwd=SKIA_SRC_DIR
     )
 
+    build_args = list(SKIA_BUILD_ARGS)
+    if args.shared_lib:
+        build_args.append("is_component_build=true")
+
     subprocess.check_call(
         [
             os.path.join(SKIA_SRC_DIR, "bin", "gn" + EXE_EXT),
             "gen",
             build_dir,
-            "--args={}".format(" ".join(SKIA_BUILD_ARGS)),
+            "--args={}".format(" ".join(build_args)),
         ],
         env=env,
         cwd=SKIA_SRC_DIR,
