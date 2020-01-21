@@ -59,7 +59,7 @@ install:
   - pip install --upgrade tox
 
   # build wheel
-  - pip wheel --no-deps --wheel-dir dist .
+  - pip wheel -v --no-deps --wheel-dir dist .
   # get the full path to the compiled wheel (ugly but works)
   - dir /s /b dist\skia_pathops*.whl > wheel.pth
   - set /p WHEEL_PATH=<wheel.pth
