@@ -13,6 +13,8 @@ import subprocess
 # script to bootstrap virtualenv without requiring pip
 GET_VIRTUALENV_URL = "https://asottile.github.io/get-virtualenv.py"
 
+EXE_EXT = ".exe" if sys.platform == "win32" else ""
+
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 SKIA_SRC_DIR = os.path.join(ROOT_DIR, "src", "cpp", "skia")
@@ -51,10 +53,9 @@ def make_virtualenv(venv_dir):
     import io
     from urllib2 import urlopen
 
-    exe = ".exe" if sys.platform == "win32" else ""
     bin_dir = "Scripts" if sys.platform == "win32" else "bin"
     venv_bin_dir = os.path.join(venv_dir, bin_dir)
-    python_exe = os.path.join(venv_bin_dir, "python" + exe)
+    python_exe = os.path.join(venv_bin_dir, "python" + EXE_EXT)
 
     # bootstrap virtualenv if not already present
     if not os.path.exists(python_exe):
@@ -69,11 +70,11 @@ def make_virtualenv(venv_dir):
     assert os.path.exists(python_exe)
 
     # pip install ninja
-    ninja_exe = os.path.join(venv_bin_dir, "ninja" + exe)
+    ninja_exe = os.path.join(venv_bin_dir, "ninja" + EXE_EXT)
     if not os.path.exists(ninja_exe):
         subprocess.check_call(
             [
-                os.path.join(venv_bin_dir, "pip" + exe),
+                os.path.join(venv_bin_dir, "pip" + EXE_EXT),
                 "install",
                 "--only-binary=ninja",
                 "ninja",
@@ -108,7 +109,7 @@ if __name__ == "__main__":
 
     subprocess.check_call(
         [
-            os.path.join("bin", "gn"),
+            os.path.join(SKIA_SRC_DIR, "bin", "gn" + EXE_EXT),
             "gen",
             build_dir,
             "--args={}".format(" ".join(SKIA_BUILD_ARGS)),
