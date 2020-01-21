@@ -1,6 +1,5 @@
 env:
   global:
-    - DOCKER_IMAGE=anthrotype/manylinux:gcc9.2.0
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _test_ project
