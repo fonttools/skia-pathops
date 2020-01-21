@@ -14,6 +14,11 @@ from io import open
 import re
 
 
+# Building libskia with its 'gn' build tool requires python2; if 'python2'
+# executable is not in your $PATH, you can export PYTHON2_EXE=... before
+# running setup.py script.
+PYTHON2_EXE = os.environ.get("PYTHON2_EXE", "python2")
+
 # check if minimum required Cython is available
 cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
 with open("pyproject.toml", "r", encoding="utf-8") as fp:
@@ -172,7 +177,7 @@ class custom_build_ext(build_ext):
 
     def run(self):
         # make sure libskia.a static library is built before the extension
-        subprocess.run(["python2", "build_skia.py"])
+        subprocess.run([PYTHON2_EXE, "build_skia.py"])
         build_ext.run(self)
 
 
