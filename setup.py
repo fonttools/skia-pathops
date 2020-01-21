@@ -177,7 +177,7 @@ class custom_build_ext(build_ext):
 
     def run(self):
         # make sure libskia.a static library is built before the extension
-        subprocess.run([PYTHON2_EXE, "build_skia.py"])
+        subprocess.run([PYTHON2_EXE, "build_skia.py"], check=True)
         build_ext.run(self)
 
 
