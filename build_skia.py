@@ -63,7 +63,9 @@ def make_virtualenv(venv_dir):
         with closing(urlopen(GET_VIRTUALENV_URL)) as response:
             tmp.write(response.read())
 
-        p = subprocess.Popen([sys.executable, "-", venv_dir], stdin=subprocess.PIPE)
+        p = subprocess.Popen(
+            [sys.executable, "-", "--no-download", venv_dir], stdin=subprocess.PIPE
+        )
         p.communicate(tmp.getvalue())
         if p.returncode != 0:
             sys.exit("failed to create virtualenv")
