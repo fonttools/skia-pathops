@@ -7,7 +7,6 @@ from distutils import log
 from distutils.dep_util import newer_group
 from distutils.dir_util import mkpath
 from distutils.file_util import copy_file
-from collections import namedtuple
 import pkg_resources
 import subprocess
 import sys
@@ -180,11 +179,10 @@ class custom_build_ext(build_ext):
 
     def get_libraries(self, ext):
         build_base = self.get_finalized_command("build").build_base
-        for i, builder in enumerate(ext.libraries):
-            if callable(builder):
-                lib = builder(build_base)
-                ext.libraries[i] = lib.name
-                ext.library_dirs.append(lib.build_dir)
+        for library in ext.libraries:
+            if library in LIBRARY_BUILDERS:
+                library_dir = LIBRARY_BUILDERS[library](build_base)
+                ext.library_dirs.append(library_dir)
 
         return build_ext.get_libraries(self, ext)
 
@@ -221,9 +219,6 @@ class custom_build_ext(build_ext):
                 )
 
 
-_LibraryOutput = namedtuple("_LibraryOutput", "name build_dir")
-
-
 def build_skia(build_base):
     log.info("building 'skia' library")
     build_dir = os.path.join(build_base, "skia")
@@ -234,7 +229,12 @@ def build_skia(build_base):
     if sys.platform == "win32":
         build_cmd.append("--shared-lib")
     subprocess.run(build_cmd, check=True)
-    return _LibraryOutput("skia", build_dir)
+    return build_dir
+
+
+LIBRARY_BUILDERS = {
+    "skia": build_skia,
+}
 
 
 pkg_dir = os.path.join("src", "python")
@@ -268,7 +268,7 @@ extensions = [
         ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
-        libraries=[build_skia],
+        libraries=["skia"],
         language="c++",
     ),
 ]
