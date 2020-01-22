@@ -32,7 +32,6 @@ SKIA_BUILD_ARGS = [
     "skia_use_freetype=false",
     "skia_use_fontconfig=false",
     "skia_use_fonthost_mac=false",
-    "skia_use_gl=false",
     "skia_use_harfbuzz=false",
     "skia_use_icu=false",
     "skia_use_libgifcodec=false",
@@ -49,11 +48,10 @@ if sys.platform != "win32":
     # on Windows, defining this flag creates other linker issues (SkFontMgr being
     # redefined by SkFontMgr_win_dw_factory.obj)...
     SKIA_BUILD_ARGS.append("skia_enable_fontmgr_empty=true")
-    # We don't need GPU, but disabling this on Windows creates lots of undefined
-    # symbols upon linking the skia.dll, coming from SkWGL_win.cpp. The latter
-    # seems to require OpenGL32.lib, but this is only linked in when
-    # skia_enable_gpu=true (default), so I keep it on for Windows...
+    # We don't need GPU or GL support, but disabling this on Windows creates lots
+    # of undefined symbols upon linking the skia.dll, so I keep them for Windows...
     SKIA_BUILD_ARGS.append("skia_enable_gpu=false")
+    SKIA_BUILD_ARGS.append("skia_use_gl=false")
 
 
 def make_virtualenv(venv_dir):
