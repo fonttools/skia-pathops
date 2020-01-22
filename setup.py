@@ -7,6 +7,7 @@ from distutils import log
 from distutils.dep_util import newer_group
 from distutils.dir_util import mkpath
 from distutils.file_util import copy_file
+from collections import namedtuple
 import pkg_resources
 import subprocess
 import sys
@@ -177,50 +178,63 @@ class custom_build_ext(build_ext):
             build_temp=self.build_temp,
             target_lang=language)
 
+    def get_libraries(self, ext):
+        build_base = self.get_finalized_command("build").build_base
+        for i, builder in enumerate(ext.libraries):
+            if callable(builder):
+                lib = builder(build_base)
+                ext.libraries[i] = lib.name
+                ext.library_dirs.append(lib.build_dir)
+
+        return build_ext.get_libraries(self, ext)
+
     def run(self):
-        # make sure skia library is built before the extension module, inside the
-        # correct build_base dir (usually './build')
-        build_dir = os.path.join(self.get_finalized_command("build").build_base, "skia")
-        build_cmd = [PYTHON2_EXE, "build_skia.py", build_dir]
-        # for Windows, we want to build a shared skia.dll. If we build a static lib
-        # then gn/ninja pass the /MT flag (static runtime library) instead of /MD,
-        # and produce linker errors when building the python extension module
-        if sys.platform == "win32":
-            build_cmd.append("--shared-lib")
-        subprocess.run(build_cmd, check=True)
-
-        # prepend the build dir to library_dirs so the linker can find our libskia
-        for ext in self.extensions:
-            ext.library_dirs.insert(0, build_dir)
-
         build_ext.run(self)
-
-        # copy skia.dll next to the extension module
         if sys.platform == "win32":
-            for ext in self.extensions:
-                for lib_name in ext.libraries:
-                    for lib_dir in ext.library_dirs:
-                        dll_filename = lib_name + ".dll"
-                        dll_fullpath = os.path.join(lib_dir, dll_filename)
-                        if os.path.exists(dll_fullpath):
-                            break
-                    else:
-                        log.debug(
-                            "cannot find '{}' in: {}".format(
-                                dll_filename, ", ".join(ext.library_dirs)
-                            )
-                        )
-                        continue
+            self._copy_windows_dlls()
 
-                    ext_path = self.get_ext_fullpath(ext.name)
-                    dest_dir = os.path.dirname(ext_path)
-                    mkpath(dest_dir, verbose=self.verbose, dry_run=self.dry_run)
-                    copy_file(
-                        dll_fullpath,
-                        os.path.join(dest_dir, dll_filename),
-                        verbose=self.verbose,
-                        dry_run=self.dry_run,
+    def _copy_windows_dlls(self):
+        # copy DLLs next to the extension module
+        for ext in self.extensions:
+            for lib_name in ext.libraries:
+                for lib_dir in ext.library_dirs:
+                    dll_filename = lib_name + ".dll"
+                    dll_fullpath = os.path.join(lib_dir, dll_filename)
+                    if os.path.exists(dll_fullpath):
+                        break
+                else:
+                    log.debug(
+                        "cannot find '{}' in: {}".format(
+                            dll_filename, ", ".join(ext.library_dirs)
+                        )
                     )
+                    continue
+
+                ext_path = self.get_ext_fullpath(ext.name)
+                dest_dir = os.path.dirname(ext_path)
+                mkpath(dest_dir, verbose=self.verbose, dry_run=self.dry_run)
+                copy_file(
+                    dll_fullpath,
+                    os.path.join(dest_dir, dll_filename),
+                    verbose=self.verbose,
+                    dry_run=self.dry_run,
+                )
+
+
+_LibraryOutput = namedtuple("_LibraryOutput", "name build_dir")
+
+
+def build_skia(build_base):
+    log.info("building 'skia' library")
+    build_dir = os.path.join(build_base, "skia")
+    build_cmd = [PYTHON2_EXE, "build_skia.py", build_dir]
+    # for Windows, we want to build a shared skia.dll. If we build a static lib
+    # then gn/ninja pass the /MT flag (static runtime library) instead of /MD,
+    # and produce linker errors when building the python extension module
+    if sys.platform == "win32":
+        build_cmd.append("--shared-lib")
+    subprocess.run(build_cmd, check=True)
+    return _LibraryOutput("skia", build_dir)
 
 
 pkg_dir = os.path.join("src", "python")
@@ -254,7 +268,7 @@ extensions = [
         ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
-        libraries=["skia"],
+        libraries=[build_skia],
         language="c++",
     ),
 ]
