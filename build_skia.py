@@ -22,7 +22,6 @@ SKIA_BUILD_ARGS = [
     "is_official_build=true",
     "is_debug=false",
     "skia_enable_pdf=false",
-    "skia_enable_ccpr=false",
     "skia_enable_discrete_gpu=false",
     "skia_enable_nvpr=false",
     "skia_enable_skottie=false",
@@ -52,6 +51,7 @@ if sys.platform != "win32":
     # of undefined symbols upon linking the skia.dll, so I keep them for Windows...
     SKIA_BUILD_ARGS.append("skia_enable_gpu=false")
     SKIA_BUILD_ARGS.append("skia_use_gl=false")
+    SKIA_BUILD_ARGS.append("skia_enable_ccpr=false")
 
 
 def make_virtualenv(venv_dir):
