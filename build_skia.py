@@ -6,6 +6,7 @@ if py_ver > (2, 7):
     sys.exit("python 2.7 is required; this is {}.{}".format(*py_ver))
 
 import argparse
+import glob
 import os
 import subprocess
 
@@ -137,3 +138,10 @@ if __name__ == "__main__":
     )
 
     subprocess.check_call(["ninja", "-C", build_dir], env=env)
+
+    # when building skia.dll on windows with gn and ninja, the DLL import file
+    # is written as 'skia.dll.lib'; however, when linking it with the extension
+    # module, setuptools expects it to be named 'skia.lib'.
+    if sys.platform == "win32" and args.shared_lib:
+        for f in glob.glob(os.path.join(build_dir, "skia.dll.*")):
+            os.rename(f, f.rsplit(".")[0])
