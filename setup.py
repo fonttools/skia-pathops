@@ -17,6 +17,12 @@ from io import open
 import re
 
 
+# export BUILD_SKIA_FROM_SOURCE=0 to not build libskia when building extension
+BUILD_SKIA_FROM_SOURCE = bool(int(os.environ.get("BUILD_SKIA_FROM_SOURCE", "1")))
+# Use this to specify the directory where your pre-built skia is located
+SKIA_LIBRARY_DIR = os.environ.get("SKIA_LIBRARY_DIR")
+
+
 # Building libskia with its 'gn' build tool requires python2; if 'python2'
 # executable is not in your $PATH, you can export PYTHON2_EXE=... before
 # running setup.py script.
@@ -68,6 +74,20 @@ class custom_build_ext(build_ext):
     apply to all the other compiler types except for those explicitly
     listed.
     """
+
+    _library_builders = {}
+
+    @classmethod
+    def register_library_builder(cls, library_name, builder):
+        """Associates a builder function with signature `func(str) -> str` to
+        the given library_name. The builder is a callable that takes one
+        parameter, a build directory (e.g. './build'), and returns the full
+        directory path where the newly built library is located (e.g. a sub-
+        directory of the base build dir).
+        Builder functions will be called in `get_libraries` method.
+        E.g. see `build_skia` function defined below.
+        """
+        cls._library_builders[library_name] = builder
 
     def finalize_options(self):
         if with_cython:
@@ -179,10 +199,13 @@ class custom_build_ext(build_ext):
             target_lang=language)
 
     def get_libraries(self, ext):
-        build_base = self.get_finalized_command("build").build_base
+        """Build all libraries for which a builder function is registered,
+        and append the resulting directory path to the extension module's
+        'library_dirs' list so that the linker can find.
+        """
         for library in ext.libraries:
-            if library in LIBRARY_BUILDERS:
-                library_dir = LIBRARY_BUILDERS[library](build_base)
+            if library in self._library_builders:
+                library_dir = self._library_builders[library](self.build_temp)
                 ext.library_dirs.append(library_dir)
 
         return build_ext.get_libraries(self, ext)
@@ -222,7 +245,7 @@ class custom_build_ext(build_ext):
 
 def build_skia(build_base):
     log.info("building 'skia' library")
-    build_dir = os.path.join(build_base, "skia")
+    build_dir = os.path.join(build_base, "src", "cpp", "skia")
     build_cmd = [PYTHON2_EXE, "build_skia.py", build_dir]
 
     env = os.environ.copy()
@@ -244,9 +267,8 @@ def build_skia(build_base):
     return build_dir
 
 
-LIBRARY_BUILDERS = {
-    "skia": build_skia,
-}
+if BUILD_SKIA_FROM_SOURCE:
+    custom_build_ext.register_library_builder("skia", build_skia)
 
 
 pkg_dir = os.path.join("src", "python")
@@ -269,6 +291,8 @@ extra_compile_args = {
     ],
 }
 
+library_dirs = [SKIA_LIBRARY_DIR] if SKIA_LIBRARY_DIR is not None else []
+
 extensions = [
     Extension(
         "pathops._pathops",
@@ -281,6 +305,7 @@ extensions = [
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
         libraries=["skia"],
+        library_dirs=library_dirs,
         language="c++",
     ),
 ]
