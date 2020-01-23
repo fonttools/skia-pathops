@@ -61,6 +61,8 @@ if ({"build",
 needs_wheel = {'bdist_wheel'}.intersection(argv)
 wheel = ['wheel'] if needs_wheel else []
 
+setuptools_git_ls_files = ["setuptools_git_ls_files"] if os.path.isdir(".git") else []
+
 
 class custom_build_ext(build_ext):
     """ Custom 'build_ext' command which allows to pass compiler-specific
@@ -331,7 +333,7 @@ setup_params = dict(
     cmdclass={
         'build_ext': custom_build_ext,
     },
-    setup_requires=["setuptools_scm"] + wheel,
+    setup_requires=["setuptools_scm"] + setuptools_git_ls_files + wheel,
     install_requires=[
     ],
     extras_require={
