@@ -8,6 +8,7 @@ from distutils.dep_util import newer_group
 from distutils.dir_util import mkpath
 from distutils.file_util import copy_file
 import pkg_resources
+import struct
 import subprocess
 import sys
 import os
@@ -223,12 +224,21 @@ def build_skia(build_base):
     log.info("building 'skia' library")
     build_dir = os.path.join(build_base, "skia")
     build_cmd = [PYTHON2_EXE, "build_skia.py", build_dir]
-    # for Windows, we want to build a shared skia.dll. If we build a static lib
-    # then gn/ninja pass the /MT flag (static runtime library) instead of /MD,
-    # and produce linker errors when building the python extension module
+
+    env = os.environ.copy()
     if sys.platform == "win32":
+        from distutils._msvccompiler import _get_vc_env
+
+        # for Windows, we want to build a shared skia.dll. If we build a static lib
+        # then gn/ninja pass the /MT flag (static runtime library) instead of /MD,
+        # and produce linker errors when building the python extension module
         build_cmd.append("--shared-lib")
-    subprocess.run(build_cmd, check=True)
+
+        # update Visual C++ toolchain environment depending on python architecture
+        arch = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
+        env.update(_get_vc_env(arch))
+
+    subprocess.run(build_cmd, check=True, env=env)
     return build_dir
 
 
