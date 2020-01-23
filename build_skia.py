@@ -111,6 +111,12 @@ if __name__ == "__main__":
         action="store_true",
         help="build a shared library (default: static)"
     )
+    parser.add_argument(
+        "--target-cpu",
+        default=None,
+        help="The desired CPU architecture for the build (default: host)",
+        choices=["x86", "x64", "arm", "arm64", "mipsel"]
+    )
     args = parser.parse_args()
 
     build_dir = os.path.abspath(args.build_dir)
@@ -125,6 +131,8 @@ if __name__ == "__main__":
     build_args = list(SKIA_BUILD_ARGS)
     if args.shared_lib:
         build_args.append("is_component_build=true")
+    if args.target_cpu:
+        build_args.append('target_cpu="{}"'.format(args.target_cpu))
 
     subprocess.check_call(
         [
