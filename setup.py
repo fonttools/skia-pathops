@@ -238,6 +238,8 @@ def build_skia(build_base):
         arch = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
         env.update(_get_vc_env(arch))
 
+        build_cmd.extend(["--target-cpu", arch])
+
     subprocess.run(build_cmd, check=True, env=env)
     return build_dir
 
