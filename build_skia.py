@@ -144,4 +144,4 @@ if __name__ == "__main__":
     # module, setuptools expects it to be named 'skia.lib'.
     if sys.platform == "win32" and args.shared_lib:
         for f in glob.glob(os.path.join(build_dir, "skia.dll.*")):
-            os.rename(f, f.rsplit(".")[0])
+            os.rename(f, f.replace(".dll", ""))
