@@ -3,7 +3,7 @@ env:
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _test_ project
-    - TEST_DEPENDS="tox pip==19.3.1"
+    - TEST_DEPENDS="tox"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
     # use 'manylinux2014' since Skia requires C++14 support

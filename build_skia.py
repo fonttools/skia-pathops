@@ -6,6 +6,7 @@ if py_ver > (2, 7):
     sys.exit("python 2.7 is required; this is {}.{}".format(*py_ver))
 
 import argparse
+import glob
 import os
 import subprocess
 
@@ -22,21 +23,15 @@ SKIA_BUILD_ARGS = [
     "is_official_build=true",
     "is_debug=false",
     "skia_enable_pdf=false",
-    "skia_enable_ccpr=false",
-    "skia_enable_gpu=false",
     "skia_enable_discrete_gpu=false",
     "skia_enable_nvpr=false",
     "skia_enable_skottie=false",
     "skia_enable_skshaper=false",
-    "skia_enable_fontmgr_empty=true",
-    "skia_enable_fontmgr_win=false",
-    "skia_enable_fontmgr_win_gdi=false",
     "skia_use_dng_sdk=false",
     "skia_use_expat=false",
     "skia_use_freetype=false",
     "skia_use_fontconfig=false",
     "skia_use_fonthost_mac=false",
-    "skia_use_gl=false",
     "skia_use_harfbuzz=false",
     "skia_use_icu=false",
     "skia_use_libgifcodec=false",
@@ -48,6 +43,16 @@ SKIA_BUILD_ARGS = [
     "skia_use_xps=false",
     "skia_use_zlib=false",
 ]
+if sys.platform != "win32":
+    # On Linux, I need this flag otherwise I get undefined symbol upon importing;
+    # on Windows, defining this flag creates other linker issues (SkFontMgr being
+    # redefined by SkFontMgr_win_dw_factory.obj)...
+    SKIA_BUILD_ARGS.append("skia_enable_fontmgr_empty=true")
+    # We don't need GPU or GL support, but disabling this on Windows creates lots
+    # of undefined symbols upon linking the skia.dll, so I keep them for Windows...
+    SKIA_BUILD_ARGS.append("skia_enable_gpu=false")
+    SKIA_BUILD_ARGS.append("skia_use_gl=false")
+    SKIA_BUILD_ARGS.append("skia_enable_ccpr=false")
 
 
 def make_virtualenv(venv_dir):
@@ -65,7 +70,9 @@ def make_virtualenv(venv_dir):
         with closing(urlopen(GET_VIRTUALENV_URL)) as response:
             tmp.write(response.read())
 
-        p = subprocess.Popen([sys.executable, "-", venv_dir], stdin=subprocess.PIPE)
+        p = subprocess.Popen(
+            [sys.executable, "-", "--no-download", venv_dir], stdin=subprocess.PIPE
+        )
         p.communicate(tmp.getvalue())
         if p.returncode != 0:
             sys.exit("failed to create virtualenv")
@@ -98,6 +105,18 @@ if __name__ == "__main__":
         nargs="?",
         help="directory where to build libskia (default: %(default)s)",
     )
+    parser.add_argument(
+        "-s",
+        "--shared-lib",
+        action="store_true",
+        help="build a shared library (default: static)"
+    )
+    parser.add_argument(
+        "--target-cpu",
+        default=None,
+        help="The desired CPU architecture for the build (default: host)",
+        choices=["x86", "x64", "arm", "arm64", "mipsel"]
+    )
     args = parser.parse_args()
 
     build_dir = os.path.abspath(args.build_dir)
@@ -109,15 +128,28 @@ if __name__ == "__main__":
         ["python", os.path.join("tools", "git-sync-deps")], env=env, cwd=SKIA_SRC_DIR
     )
 
+    build_args = list(SKIA_BUILD_ARGS)
+    if args.shared_lib:
+        build_args.append("is_component_build=true")
+    if args.target_cpu:
+        build_args.append('target_cpu="{}"'.format(args.target_cpu))
+
     subprocess.check_call(
         [
             os.path.join(SKIA_SRC_DIR, "bin", "gn" + EXE_EXT),
             "gen",
             build_dir,
-            "--args={}".format(" ".join(SKIA_BUILD_ARGS)),
+            "--args={}".format(" ".join(build_args)),
         ],
         env=env,
         cwd=SKIA_SRC_DIR,
     )
 
     subprocess.check_call(["ninja", "-C", build_dir], env=env)
+
+    # when building skia.dll on windows with gn and ninja, the DLL import file
+    # is written as 'skia.dll.lib'; however, when linking it with the extension
+    # module, setuptools expects it to be named 'skia.lib'.
+    if sys.platform == "win32" and args.shared_lib:
+        for f in glob.glob(os.path.join(build_dir, "skia.dll.*")):
+            os.rename(f, f.replace(".dll", ""))
