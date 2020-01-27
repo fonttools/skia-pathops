@@ -229,7 +229,7 @@ cpdef int restore_starting_points(Path path, list points) except -1
 cpdef bint winding_from_even_odd(Path path, bint truetype=*) except False
 
 
-cdef list decompose_quadratic_segment(tuple points)
+cdef list _decompose_quadratic_segment(tuple points)
 
 
 cdef int find_oncurve_point(

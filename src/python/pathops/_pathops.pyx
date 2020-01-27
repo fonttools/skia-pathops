@@ -706,7 +706,7 @@ cdef class PathPen:
             pt3[0], pt3[1])
 
     def qCurveTo(self, *points):
-        for pt1, pt2 in decompose_quadratic_segment(points):
+        for pt1, pt2 in _decompose_quadratic_segment(points):
             self._qCurveToOne(pt1, pt2)
 
     cdef _qCurveToOne(self, pt1, pt2):
@@ -1031,7 +1031,11 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
     return True
 
 
-cdef list decompose_quadratic_segment(tuple points):
+def decompose_quadratic_segment(points):
+    return _decompose_quadratic_segment(points)
+
+
+cdef list _decompose_quadratic_segment(tuple points):
     cdef:
         int i, n = len(points) - 1
         list quad_segments = []
