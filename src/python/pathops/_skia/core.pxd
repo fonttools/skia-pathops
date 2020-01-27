@@ -150,11 +150,23 @@ cdef extern from "include/core/SkScalar.h":
     cdef enum:
         SK_ScalarNearlyZero
 
+cdef extern from "include/core/SkPaint.h":
+    enum SkLineCap:
+        kButt_Cap "SkPaint::Cap::kButt_Cap",
+        kRound_Cap "SkPaint::Cap::kRound_Cap",
+        kSquare_Cap "SkPaint::Cap::kSquare_Cap"
+
+    enum SkLineJoin:
+        kMiter_Join "SkPaint::Join::kMiter_Join",
+        kRound_Join "SkPaint::Join::kRound_Join",
+        kBevel_Join "SkPaint::Join::kBevel_Join"
+
 cdef extern from "include/core/SkStrokeRec.h":
     cdef cppclass SkStrokeRec:
         SkStrokeRec(InitStyle style)
 
         void setStrokeStyle(SkScalar width, bint strokeAndFill)
+        void setStrokeParams(SkLineCap cap, SkLineJoin join, SkScalar miterLimit)
 
         bint applyToPath(SkPath* dst, const SkPath& src) const;
 
