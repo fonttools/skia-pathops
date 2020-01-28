@@ -5,6 +5,8 @@ from ._skia.core cimport (
     SkScalar,
     SkStrokeRec,
     SkRect,
+    SkLineCap,
+    SkLineJoin,
     kMove_Verb,
     kLine_Verb,
     kQuad_Verb,
@@ -334,11 +336,12 @@ cdef class Path:
         if keep_starting_points:
             restore_starting_points(self, first_points)
 
-    cpdef stroke(self, width):
+    cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit):
         stroke_rec = new SkStrokeRec(kFill_InitStyle)
         try:
-             stroke_rec.setStrokeStyle(width, False)
-             stroke_rec.applyToPath(&self.path, self.path)
+            stroke_rec.setStrokeStyle(width, False)
+            stroke_rec.setStrokeParams(<SkLineCap>cap, <SkLineJoin>join, miter_limit)
+            stroke_rec.applyToPath(&self.path, self.path)
         finally:
             del stroke_rec
 
