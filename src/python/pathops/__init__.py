@@ -4,6 +4,8 @@ from ._pathops import (
     PathVerb,
     PathOp,
     FillType,
+    LineCap,
+    LineJoin,
     op,
     simplify,
     OpBuilder,
