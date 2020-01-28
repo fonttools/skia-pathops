@@ -699,7 +699,7 @@ def test_strip_collinear_moveTo():
             (
                 ('moveTo', (5, 5)),
                 ('lineTo', (10, 5)),
-                ('stroke', (2,)),
+                ('stroke', (2, 0, 0, 1)),
             ),
             (
                 ('moveTo', ((5., 4.),)),
@@ -709,12 +709,24 @@ def test_strip_collinear_moveTo():
                 ('lineTo', ((5., 4.),)),
                 ('closePath', ()),
             ),
-        )
+        ),
+        # draw a conic and convert to quads
+        (
+            (
+                ('moveTo', (10, 10)),
+                ('conicTo', (20, 20, 10, 30, 5)),
+                ('convertConicsToQuads', ()),
+            ),
+            (
+            ),
+        ),
     ]
 )
-def test_stroke_path(operations, expected):
+def test_path_operation(operations, expected):
     path = Path()
     for op, args in operations:
         getattr(path, op)(*args)
 
     assert tuple(path.segments) == expected
+
+

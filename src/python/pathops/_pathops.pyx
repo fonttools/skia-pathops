@@ -246,9 +246,16 @@ cdef class Path:
             coords_to_string = lambda fs: (", ".join("%g" % f for f in fs))
         s = ["path.fillType = %s" % self.fillType]
         for verb, pts in self:
+            print(verb, [pt for pt in pts])
+        for verb, pts in self:
+            # if the last pt isn't a pt, such as for conic weight, peel it off
+            suffix = ''
+            if pts and not isinstance(pts[-1], tuple):
+                suffix = "[%s]" % coords_to_string([pts[-1]])
+                pts = pts[:-1]
             method = VERB_METHODS[verb]
             coords = itertools.chain(*pts)
-            line = "path.%s(%s)" % (method, coords_to_string(coords))
+            line = "path.%s(%s)%s" % (method, coords_to_string(coords), suffix)
             s.append(line)
         return "\n".join(s)
 
@@ -336,7 +343,11 @@ cdef class Path:
         if keep_starting_points:
             restore_starting_points(self, first_points)
 
+    cpdef convertConicsToQuads(self):
+        pass
+
     cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit):
+        # Do stroke
         stroke_rec = new SkStrokeRec(kFill_InitStyle)
         try:
             stroke_rec.setStrokeStyle(width, False)
@@ -344,6 +355,9 @@ cdef class Path:
             stroke_rec.applyToPath(&self.path, self.path)
         finally:
             del stroke_rec
+
+        # Nuke any conics that snuck in
+        self.convertConicsToQuads()
 
     cdef list getVerbs(self):
         cdef int i, count
