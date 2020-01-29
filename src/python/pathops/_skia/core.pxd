@@ -131,6 +131,10 @@ cdef extern from * namespace "SkPath":
         kClose_Verb,
         kDone_Verb
 
+    cdef int ConvertConicToQuads(const SkPoint& p0, const SkPoint& p1,
+                                 const SkPoint& p2, SkScalar w,
+                                 SkPoint pts[], int pow2)
+
 
 cdef extern from "include/core/SkRect.h":
 
