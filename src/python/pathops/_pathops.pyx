@@ -16,6 +16,7 @@ from ._skia.core cimport (
     kDone_Verb,
     kFill_InitStyle,
     SK_ScalarNearlyZero,
+    ConvertConicToQuads,
 )
 from ._skia.pathops cimport (
     Op,
@@ -343,8 +344,72 @@ cdef class Path:
         if keep_starting_points:
             restore_starting_points(self, first_points)
 
+
+    def _has(self, verb):
+        return any(my_verb == verb for my_verb, _ in self)
+
+
     cpdef convertConicsToQuads(self):
-        pass
+        if not self._has(kConic_Verb):
+            return
+
+        # TODO set pow2 to 1 if sweep <= 90 degrees
+        cdef pow2 = 2
+        cdef count = 1 + 2 * (1<<pow2)
+        cdef SkPoint *quad_pts
+        cdef num_quads
+
+        quad_pts = <SkPoint *> PyMem_Malloc(count * sizeof(SkPoint))
+        if not quad_pts:
+            raise MemoryError()
+        cdef SkPoint *quad = quad_pts
+
+        cdef SkPath temp
+        cdef SkPathFillType fillType = self.path.getFillType()
+        temp.setFillType(fillType)
+
+        try:
+            prev = (0., 0.)
+            for verb, pts in self:
+                print('L1', verb, pts)
+                if verb != kConic_Verb:
+                    if verb != kClose_Verb:
+                        prev = pts[-1]
+
+                    # TODO cython got angry when I tried to make this a fn
+                    if verb == kMove_Verb:
+                        temp.moveTo(pts[0][0], pts[0][1])
+                    elif verb == kLine_Verb:
+                        temp.lineTo(pts[0][0], pts[0][1])
+                    elif verb == kQuad_Verb:
+                        temp.quadTo(pts[0][0], pts[0][1],
+                                    pts[1][0], pts[1][1])
+                    elif verb == kCubic_Verb:
+                        temp.cubicTo(pts[0][0], pts[0][1],
+                                     pts[1][0], pts[1][1],
+                                     pts[2][0], pts[2][1])
+                    elif verb == kClose_Verb:
+                        temp.close()
+                    else:
+                        raise UnsupportedVerbError(verb)
+
+                    continue
+
+                num_quads = ConvertConicToQuads(SkPoint.Make(prev[0], prev[1]),
+                                                SkPoint.Make(pts[0][0], pts[0][1]),
+                                                SkPoint.Make(pts[1][0], pts[1][1]),
+                                                pts[2], quad_pts, pow2)
+
+                for i in range(0, 2 * num_quads, 2):
+                    temp.quadTo(quad_pts[i].x(), quad_pts[i].y(),
+                                quad_pts[i + 1].x(), quad_pts[i + 1].y())
+
+                prev = pts[-2] # -1 is weight
+
+        finally:
+            PyMem_Free(quad_pts)
+
+        self.path = temp
 
     cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit):
         # Do stroke
@@ -358,6 +423,7 @@ cdef class Path:
 
         # Nuke any conics that snuck in
         self.convertConicsToQuads()
+
 
     cdef list getVerbs(self):
         cdef int i, count
