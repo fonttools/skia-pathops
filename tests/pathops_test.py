@@ -692,10 +692,10 @@ def test_strip_collinear_moveTo():
 
 
 @pytest.mark.parametrize(
-    "operations, expected",
+    "message, operations, expected",
     [
-        # stroke a line 2 units wide
         (
+            'stroke_2_wide',
             (
                 ('moveTo', (5, 5)),
                 ('lineTo', (10, 5)),
@@ -710,23 +710,24 @@ def test_strip_collinear_moveTo():
                 ('closePath', ()),
             ),
         ),
-        # draw a conic and convert to quads
         (
+            'conic_2_quad',
             (
                 ('moveTo', (10, 10)),
                 ('conicTo', (20, 20, 10, 30, 5)),
                 ('convertConicsToQuads', ()),
             ),
             (
+                'duck'
             ),
         ),
     ]
 )
-def test_path_operation(operations, expected):
+def test_path_operation(message, operations, expected):
     path = Path()
     for op, args in operations:
         getattr(path, op)(*args)
 
-    assert tuple(path.segments) == expected
+    assert tuple(path.segments) == expected, message
 
 
