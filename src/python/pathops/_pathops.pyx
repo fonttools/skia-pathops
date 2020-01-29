@@ -371,9 +371,10 @@ cdef class Path:
         try:
             prev = (0., 0.)
             for verb, pts in self:
-                print('L1', verb, pts)
+                print('L1', verb, 'prev', prev, 'pts', pts)
                 if verb != kConic_Verb:
                     if verb != kClose_Verb:
+                        prev_verb = verb
                         prev = pts[-1]
 
                     # TODO cython got angry when I tried to make this a fn
@@ -400,7 +401,11 @@ cdef class Path:
                                                 SkPoint.Make(pts[1][0], pts[1][1]),
                                                 pts[2], quad_pts, pow2)
 
-                for i in range(0, 2 * num_quads, 2):
+                # quat_pts[0] is a moveTo that may be a nop
+                if prev != (quad_pts[0].x(), quad_pts[0].y()):
+                    temp.moveTo(quad_pts[0].x(), quad_pts[0].y())
+
+                for i in range(1, count, 2):
                     temp.quadTo(quad_pts[i].x(), quad_pts[i].y(),
                                 quad_pts[i + 1].x(), quad_pts[i + 1].y())
 
