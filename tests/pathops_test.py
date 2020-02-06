@@ -8,6 +8,8 @@ from pathops import (
     FillType,
     bits2float,
     float2bits,
+    ArcSize,
+    Direction,
 )
 
 import pytest
@@ -723,6 +725,31 @@ def test_strip_collinear_moveTo():
                 ('endPath', ())
             ),
         ),
+        (
+            'arc_to_quads',
+            (
+                ('moveTo', (7, 5)),
+                ('arcTo', (3, 1, 0, ArcSize.SMALL, Direction.CCW, 7, 2)),
+                ('convertConicsToQuads', ()),
+            ),
+            (
+                ('moveTo', ((7.0, 5.0),)),
+                (
+                    'qCurveTo', (
+                        (7.9, 5.0),
+                        (9.55, 4.77),
+                        (10.81, 4.35),
+                        (11.5, 3.8),
+                        (11.5, 3.2),
+                        (10.81, 2.65),
+                        (9.55, 2.23),
+                        (7.9, 2.0),
+                        (7.0, 2.0)
+                    )
+                ),
+                ('endPath', ()),
+            )
+        )
     ]
 )
 def test_path_operation(message, operations, expected):

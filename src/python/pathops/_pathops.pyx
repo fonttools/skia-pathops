@@ -7,6 +7,7 @@ from ._skia.core cimport (
     SkRect,
     SkLineCap,
     SkLineJoin,
+    SkPathDirection,
     kMove_Verb,
     kLine_Verb,
     kQuad_Verb,
@@ -209,6 +210,18 @@ cdef class Path:
         SkScalar y3,
     ):
         self.path.cubicTo(x1, y1, x2, y2, x3, y3)
+
+    cpdef void arcTo(
+        self,
+        SkScalar rx,
+        SkScalar ry,
+        SkScalar xAxisRotate,
+        ArcSize largeArc,
+        Direction sweep,
+        SkScalar x,
+        SkScalar y,
+    ):
+        self.path.arcTo(rx, ry, xAxisRotate, largeArc, <SkPathDirection>sweep, x, y)
 
     cpdef void close(self):
         self.path.close()

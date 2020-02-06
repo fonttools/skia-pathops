@@ -6,6 +6,8 @@ from ._pathops import (
     FillType,
     LineCap,
     LineJoin,
+    ArcSize,
+    Direction,
     op,
     simplify,
     OpBuilder,

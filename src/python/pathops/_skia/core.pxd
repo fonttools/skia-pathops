@@ -12,6 +12,10 @@ cdef extern from "include/core/SkPathTypes.h":
         kInverseWinding "SkPathFillType::kInverseWinding",
         kInverseEvenOdd "SkPathFillType::kInverseEvenOdd"
 
+    enum SkPathDirection:
+        kCW "SkPathDirection::kCW"
+        kCCW "SkPathDirection::kCCW"
+
 
 cdef extern from "include/core/SkPath.h":
 
@@ -56,6 +60,11 @@ cdef extern from "include/core/SkPath.h":
         void conicTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2,
                      SkScalar w)
         void conicTo(const SkPoint& p1, const SkPoint& p2, SkScalar w)
+
+        void arcTo(SkScalar rx, SkScalar ry, SkScalar xAxisRotate, ArcSize largeArc,
+                   SkPathDirection sweep, SkScalar x, SkScalar y)
+        void arcTo(SkPoint& r, SkScalar xAxisRotate, ArcSize largeArc,
+                   SkPathDirection sweep, SkPoint& xy)
 
         void close()
 
@@ -134,6 +143,10 @@ cdef extern from * namespace "SkPath":
     cdef int ConvertConicToQuads(const SkPoint& p0, const SkPoint& p1,
                                  const SkPoint& p2, SkScalar w,
                                  SkPoint pts[], int pow2)
+
+    enum ArcSize:
+        kSmall_ArcSize
+        kLarge_ArcSize
 
 
 cdef extern from "include/core/SkRect.h":
