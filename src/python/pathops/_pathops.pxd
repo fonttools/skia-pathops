@@ -12,6 +12,9 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
+    kSmall_ArcSize,
+    kLarge_ArcSize,
+    SkPathDirection,
 )
 from ._skia.pathops cimport (
     SkOpBuilder,
@@ -49,6 +52,16 @@ cpdef enum LineJoin:
     MITER_JOIN = <uint32_t>SkLineJoin.kMiter_Join,
     ROUND_JOIN = <uint32_t>SkLineJoin.kRound_Join,
     BEVEL_JOIN = <uint32_t>SkLineJoin.kBevel_Join
+
+
+cpdef enum ArcSize:
+    SMALL = kSmall_ArcSize
+    LARGE = kLarge_ArcSize
+
+
+cpdef enum Direction:
+    CW = <uint32_t>SkPathDirection.kCW
+    CCW = <uint32_t>SkPathDirection.kCCW
 
 
 cdef union FloatIntUnion:
@@ -119,6 +132,17 @@ cdef class Path:
         SkScalar y2,
         SkScalar x3,
         SkScalar y3,
+    )
+
+    cpdef void arcTo(
+        self,
+        SkScalar rx,
+        SkScalar ry,
+        SkScalar xAxisRotate,
+        ArcSize largeArc,
+        Direction sweep,
+        SkScalar x,
+        SkScalar y,
     )
 
     cpdef void close(self)
