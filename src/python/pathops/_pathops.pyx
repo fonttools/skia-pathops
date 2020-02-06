@@ -247,8 +247,6 @@ cdef class Path:
             coords_to_string = lambda fs: (", ".join("%g" % f for f in fs))
         s = ["path.fillType = %s" % self.fillType]
         for verb, pts in self:
-            print(verb, [pt for pt in pts])
-        for verb, pts in self:
             # if the last pt isn't a pt, such as for conic weight, peel it off
             suffix = ''
             if pts and not isinstance(pts[-1], tuple):
@@ -353,8 +351,8 @@ cdef class Path:
         if not self._has(kConic_Verb):
             return
 
-        # TODO set pow2 to 1 if sweep <= 90 degrees
-        cdef pow2 = 2
+        # TODO set pow2 to 2 if sweep > 90 degrees
+        cdef pow2 = 1
         cdef count = 1 + 2 * (1<<pow2)
         cdef SkPoint *quad_pts
         cdef num_quads
@@ -368,10 +366,12 @@ cdef class Path:
         cdef SkPathFillType fillType = self.path.getFillType()
         temp.setFillType(fillType)
 
+        cdef SkPoint p1
+        cdef SkPoint p2
+
         try:
             prev = (0., 0.)
             for verb, pts in self:
-                print('L1', verb, 'prev', prev, 'pts', pts)
                 if verb != kConic_Verb:
                     if verb != kClose_Verb:
                         prev_verb = verb
@@ -401,13 +401,14 @@ cdef class Path:
                                                 SkPoint.Make(pts[1][0], pts[1][1]),
                                                 pts[2], quad_pts, pow2)
 
-                # quat_pts[0] is a moveTo that may be a nop
+                # quad_pts[0] is effectively a moveTo that may be a nop
                 if prev != (quad_pts[0].x(), quad_pts[0].y()):
                     temp.moveTo(quad_pts[0].x(), quad_pts[0].y())
 
-                for i in range(1, count, 2):
-                    temp.quadTo(quad_pts[i].x(), quad_pts[i].y(),
-                                quad_pts[i + 1].x(), quad_pts[i + 1].y())
+                for i in range(num_quads):
+                    p1 = quad_pts[2 * i + 1]
+                    p2 = quad_pts[2 * i + 2]
+                    temp.quadTo(p1.x(), p1.y(), p2.x(), p2.y())
 
                 prev = pts[-2] # -1 is weight
 
