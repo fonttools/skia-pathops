@@ -276,8 +276,9 @@ if BUILD_SKIA_FROM_SOURCE:
 pkg_dir = os.path.join("src", "python")
 cpp_dir = os.path.join("src", "cpp")
 skia_dir = os.path.join(cpp_dir, "skia")
+skia_src_dir = os.path.join(skia_dir, "src") # allow access to internals
 
-include_dirs = [os.path.join(skia_dir)]
+include_dirs = [skia_dir, skia_src_dir]
 
 extra_compile_args = {
     '': [

@@ -3,6 +3,11 @@ from libc.stdint cimport uint8_t
 
 ctypedef float SkScalar
 
+cdef extern from "core/SkGeometry.h":
+    cdef struct SkConic:
+        SkConic()
+        void set(const SkPoint& p0, const SkPoint& p1, const SkPoint& p2, SkScalar w)
+        int computeQuadPOW2(SkScalar tol)
 
 cdef extern from "include/core/SkPathTypes.h":
 

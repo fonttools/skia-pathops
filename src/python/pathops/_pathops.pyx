@@ -1,4 +1,5 @@
 from ._skia.core cimport (
+    SkConic,
     SkPath,
     SkPathFillType,
     SkPoint,
@@ -364,12 +365,12 @@ cdef class Path:
         if not self._has(kConic_Verb):
             return
 
-        # TODO set pow2 to 2 if sweep > 90 degrees
-        cdef pow2 = 1
-        cdef count = 1 + 2 * (1<<pow2)
+        cdef max_pow2 = 5
+        cdef count = 1 + 2 * (1<<max_pow2)
         cdef SkPoint *quad_pts
         cdef num_quads
 
+        # The most points we could possibly need
         quad_pts = <SkPoint *> PyMem_Malloc(count * sizeof(SkPoint))
         if not quad_pts:
             raise MemoryError()
@@ -379,8 +380,12 @@ cdef class Path:
         cdef SkPathFillType fillType = self.path.getFillType()
         temp.setFillType(fillType)
 
+        cdef SkConic conic
+        cdef SkPoint p0
         cdef SkPoint p1
         cdef SkPoint p2
+        cdef SkScalar weight
+        cdef pow2
 
         try:
             prev = (0., 0.)
@@ -409,10 +414,19 @@ cdef class Path:
 
                     continue
 
-                num_quads = ConvertConicToQuads(SkPoint.Make(prev[0], prev[1]),
-                                                SkPoint.Make(pts[0][0], pts[0][1]),
-                                                SkPoint.Make(pts[1][0], pts[1][1]),
-                                                pts[2], quad_pts, pow2)
+                # Figure out a good value for pow2
+                p0 = SkPoint.Make(prev[0], prev[1])
+                p1 = SkPoint.Make(pts[0][0], pts[0][1])
+                p2 = SkPoint.Make(pts[1][0], pts[1][1])
+                weight = pts[2]
+
+                conic.set(p0, p1, p2, weight)
+                # TODO is 0.25 too delicate? - blindly copies from Skias own use
+                pow2 = conic.computeQuadPOW2(0.25)
+                assert pow2 <= max_pow2
+                num_quads = ConvertConicToQuads(p0, p1, p2,
+                                                weight, quad_pts,
+                                                pow2)
 
                 # quad_pts[0] is effectively a moveTo that may be a nop
                 if prev != (quad_pts[0].x(), quad_pts[0].y()):
