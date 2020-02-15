@@ -360,8 +360,8 @@ cdef class Path:
     def _has(self, verb):
         return any(my_verb == verb for my_verb, _ in self)
 
-
-    cpdef convertConicsToQuads(self):
+    cpdef convertConicsToQuads(self, float tolerance=0.25):
+        # TODO is 0.25 too delicate? - blindly copies from Skias own use
         if not self._has(kConic_Verb):
             return
 
@@ -421,8 +421,7 @@ cdef class Path:
                 weight = pts[2]
 
                 conic.set(p0, p1, p2, weight)
-                # TODO is 0.25 too delicate? - blindly copies from Skias own use
-                pow2 = conic.computeQuadPOW2(0.25)
+                pow2 = conic.computeQuadPOW2(tolerance)
                 assert pow2 <= max_pow2
                 num_quads = ConvertConicToQuads(p0, p1, p2,
                                                 weight, quad_pts,

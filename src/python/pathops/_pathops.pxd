@@ -159,7 +159,7 @@ cdef class Path:
 
     cpdef simplify(self, bint fix_winding=*, keep_starting_points=*)
 
-    cpdef convertConicsToQuads(self)
+    cpdef convertConicsToQuads(self, float tolerance=*)
 
     cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit)
 
