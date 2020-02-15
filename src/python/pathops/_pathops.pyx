@@ -1,9 +1,14 @@
 from ._skia.core cimport (
+    SkConic,
     SkPath,
     SkPathFillType,
     SkPoint,
     SkScalar,
+    SkStrokeRec,
     SkRect,
+    SkLineCap,
+    SkLineJoin,
+    SkPathDirection,
     kMove_Verb,
     kLine_Verb,
     kQuad_Verb,
@@ -11,7 +16,9 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
+    kFill_InitStyle,
     SK_ScalarNearlyZero,
+    ConvertConicToQuads,
 )
 from ._skia.pathops cimport (
     Op,
@@ -205,6 +212,18 @@ cdef class Path:
     ):
         self.path.cubicTo(x1, y1, x2, y2, x3, y3)
 
+    cpdef void arcTo(
+        self,
+        SkScalar rx,
+        SkScalar ry,
+        SkScalar xAxisRotate,
+        ArcSize largeArc,
+        Direction sweep,
+        SkScalar x,
+        SkScalar y,
+    ):
+        self.path.arcTo(rx, ry, xAxisRotate, largeArc, <SkPathDirection>sweep, x, y)
+
     cpdef void close(self):
         self.path.close()
 
@@ -242,9 +261,14 @@ cdef class Path:
             coords_to_string = lambda fs: (", ".join("%g" % f for f in fs))
         s = ["path.fillType = %s" % self.fillType]
         for verb, pts in self:
+            # if the last pt isn't a pt, such as for conic weight, peel it off
+            suffix = ''
+            if pts and not isinstance(pts[-1], tuple):
+                suffix = "[%s]" % coords_to_string([pts[-1]])
+                pts = pts[:-1]
             method = VERB_METHODS[verb]
             coords = itertools.chain(*pts)
-            line = "path.%s(%s)" % (method, coords_to_string(coords))
+            line = "path.%s(%s)%s" % (method, coords_to_string(coords), suffix)
             s.append(line)
         return "\n".join(s)
 
@@ -331,6 +355,107 @@ cdef class Path:
             winding_from_even_odd(self)
         if keep_starting_points:
             restore_starting_points(self, first_points)
+
+
+    def _has(self, verb):
+        return any(my_verb == verb for my_verb, _ in self)
+
+    cpdef convertConicsToQuads(self, float tolerance=0.25):
+        # TODO is 0.25 too delicate? - blindly copies from Skias own use
+        if not self._has(kConic_Verb):
+            return
+
+        cdef max_pow2 = 5
+        cdef count = 1 + 2 * (1<<max_pow2)
+        cdef SkPoint *quad_pts
+        cdef num_quads
+
+        # The most points we could possibly need
+        quad_pts = <SkPoint *> PyMem_Malloc(count * sizeof(SkPoint))
+        if not quad_pts:
+            raise MemoryError()
+        cdef SkPoint *quad = quad_pts
+
+        cdef SkPath temp
+        cdef SkPathFillType fillType = self.path.getFillType()
+        temp.setFillType(fillType)
+
+        cdef SkConic conic
+        cdef SkPoint p0
+        cdef SkPoint p1
+        cdef SkPoint p2
+        cdef SkScalar weight
+        cdef pow2
+
+        try:
+            prev = (0., 0.)
+            for verb, pts in self:
+                if verb != kConic_Verb:
+                    if verb != kClose_Verb:
+                        prev_verb = verb
+                        prev = pts[-1]
+
+                    # TODO cython got angry when I tried to make this a fn
+                    if verb == kMove_Verb:
+                        temp.moveTo(pts[0][0], pts[0][1])
+                    elif verb == kLine_Verb:
+                        temp.lineTo(pts[0][0], pts[0][1])
+                    elif verb == kQuad_Verb:
+                        temp.quadTo(pts[0][0], pts[0][1],
+                                    pts[1][0], pts[1][1])
+                    elif verb == kCubic_Verb:
+                        temp.cubicTo(pts[0][0], pts[0][1],
+                                     pts[1][0], pts[1][1],
+                                     pts[2][0], pts[2][1])
+                    elif verb == kClose_Verb:
+                        temp.close()
+                    else:
+                        raise UnsupportedVerbError(verb)
+
+                    continue
+
+                # Figure out a good value for pow2
+                p0 = SkPoint.Make(prev[0], prev[1])
+                p1 = SkPoint.Make(pts[0][0], pts[0][1])
+                p2 = SkPoint.Make(pts[1][0], pts[1][1])
+                weight = pts[2]
+
+                conic.set(p0, p1, p2, weight)
+                pow2 = conic.computeQuadPOW2(tolerance)
+                assert pow2 <= max_pow2
+                num_quads = ConvertConicToQuads(p0, p1, p2,
+                                                weight, quad_pts,
+                                                pow2)
+
+                # quad_pts[0] is effectively a moveTo that may be a nop
+                if prev != (quad_pts[0].x(), quad_pts[0].y()):
+                    temp.moveTo(quad_pts[0].x(), quad_pts[0].y())
+
+                for i in range(num_quads):
+                    p1 = quad_pts[2 * i + 1]
+                    p2 = quad_pts[2 * i + 2]
+                    temp.quadTo(p1.x(), p1.y(), p2.x(), p2.y())
+
+                prev = pts[-2] # -1 is weight
+
+        finally:
+            PyMem_Free(quad_pts)
+
+        self.path = temp
+
+    cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit):
+        # Do stroke
+        stroke_rec = new SkStrokeRec(kFill_InitStyle)
+        try:
+            stroke_rec.setStrokeStyle(width, False)
+            stroke_rec.setStrokeParams(<SkLineCap>cap, <SkLineJoin>join, miter_limit)
+            stroke_rec.applyToPath(&self.path, self.path)
+        finally:
+            del stroke_rec
+
+        # Nuke any conics that snuck in
+        self.convertConicsToQuads()
+
 
     cdef list getVerbs(self):
         cdef int i, count
@@ -696,7 +821,7 @@ cdef class PathPen:
             pt3[0], pt3[1])
 
     def qCurveTo(self, *points):
-        for pt1, pt2 in decompose_quadratic_segment(points):
+        for pt1, pt2 in _decompose_quadratic_segment(points):
             self._qCurveToOne(pt1, pt2)
 
     cdef _qCurveToOne(self, pt1, pt2):
@@ -1021,7 +1146,11 @@ cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
     return True
 
 
-cdef list decompose_quadratic_segment(tuple points):
+def decompose_quadratic_segment(points):
+    return _decompose_quadratic_segment(points)
+
+
+cdef list _decompose_quadratic_segment(tuple points):
     cdef:
         int i, n = len(points) - 1
         list quad_segments = []

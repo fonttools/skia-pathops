@@ -1,4 +1,6 @@
 from ._skia.core cimport (
+    SkLineCap,
+    SkLineJoin,
     SkPath,
     SkPathFillType,
     SkPoint,
@@ -10,6 +12,9 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
+    kSmall_ArcSize,
+    kLarge_ArcSize,
+    SkPathDirection,
 )
 from ._skia.pathops cimport (
     SkOpBuilder,
@@ -36,6 +41,27 @@ cpdef enum FillType:
     EVEN_ODD = <uint32_t>SkPathFillType.kEvenOdd
     INVERSE_WINDING = <uint32_t>SkPathFillType.kInverseWinding
     INVERSE_EVEN_ODD = <uint32_t>SkPathFillType.kInverseEvenOdd
+
+
+cpdef enum LineCap:
+    BUTT_CAP = <uint32_t>SkLineCap.kButt_Cap,
+    ROUND_CAP = <uint32_t>SkLineCap.kRound_Cap,
+    SQUARE_CAP =  <uint32_t>SkLineCap.kSquare_Cap
+
+cpdef enum LineJoin:
+    MITER_JOIN = <uint32_t>SkLineJoin.kMiter_Join,
+    ROUND_JOIN = <uint32_t>SkLineJoin.kRound_Join,
+    BEVEL_JOIN = <uint32_t>SkLineJoin.kBevel_Join
+
+
+cpdef enum ArcSize:
+    SMALL = kSmall_ArcSize
+    LARGE = kLarge_ArcSize
+
+
+cpdef enum Direction:
+    CW = <uint32_t>SkPathDirection.kCW
+    CCW = <uint32_t>SkPathDirection.kCCW
 
 
 cdef union FloatIntUnion:
@@ -108,6 +134,17 @@ cdef class Path:
         SkScalar y3,
     )
 
+    cpdef void arcTo(
+        self,
+        SkScalar rx,
+        SkScalar ry,
+        SkScalar xAxisRotate,
+        ArcSize largeArc,
+        Direction sweep,
+        SkScalar x,
+        SkScalar y,
+    )
+
     cpdef void close(self)
 
     cpdef void reset(self)
@@ -121,6 +158,10 @@ cdef class Path:
     cpdef reverse(self)
 
     cpdef simplify(self, bint fix_winding=*, keep_starting_points=*)
+
+    cpdef convertConicsToQuads(self, float tolerance=*)
+
+    cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit)
 
     cdef list getVerbs(self)
 
@@ -227,7 +268,7 @@ cpdef int restore_starting_points(Path path, list points) except -1
 cpdef bint winding_from_even_odd(Path path, bint truetype=*) except False
 
 
-cdef list decompose_quadratic_segment(tuple points)
+cdef list _decompose_quadratic_segment(tuple points)
 
 
 cdef int find_oncurve_point(

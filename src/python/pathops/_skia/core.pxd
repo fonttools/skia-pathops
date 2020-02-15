@@ -3,6 +3,11 @@ from libc.stdint cimport uint8_t
 
 ctypedef float SkScalar
 
+cdef extern from "core/SkGeometry.h":
+    cdef struct SkConic:
+        SkConic()
+        void set(const SkPoint& p0, const SkPoint& p1, const SkPoint& p2, SkScalar w)
+        int computeQuadPOW2(SkScalar tol)
 
 cdef extern from "include/core/SkPathTypes.h":
 
@@ -11,6 +16,10 @@ cdef extern from "include/core/SkPathTypes.h":
         kEvenOdd "SkPathFillType::kEvenOdd",
         kInverseWinding "SkPathFillType::kInverseWinding",
         kInverseEvenOdd "SkPathFillType::kInverseEvenOdd"
+
+    enum SkPathDirection:
+        kCW "SkPathDirection::kCW"
+        kCCW "SkPathDirection::kCCW"
 
 
 cdef extern from "include/core/SkPath.h":
@@ -56,6 +65,11 @@ cdef extern from "include/core/SkPath.h":
         void conicTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2,
                      SkScalar w)
         void conicTo(const SkPoint& p1, const SkPoint& p2, SkScalar w)
+
+        void arcTo(SkScalar rx, SkScalar ry, SkScalar xAxisRotate, ArcSize largeArc,
+                   SkPathDirection sweep, SkScalar x, SkScalar y)
+        void arcTo(SkPoint& r, SkScalar xAxisRotate, ArcSize largeArc,
+                   SkPathDirection sweep, SkPoint& xy)
 
         void close()
 
@@ -131,6 +145,14 @@ cdef extern from * namespace "SkPath":
         kClose_Verb,
         kDone_Verb
 
+    cdef int ConvertConicToQuads(const SkPoint& p0, const SkPoint& p1,
+                                 const SkPoint& p2, SkScalar w,
+                                 SkPoint pts[], int pow2)
+
+    enum ArcSize:
+        kSmall_ArcSize
+        kLarge_ArcSize
+
 
 cdef extern from "include/core/SkRect.h":
 
@@ -149,3 +171,29 @@ cdef extern from "include/core/SkScalar.h":
 
     cdef enum:
         SK_ScalarNearlyZero
+
+
+cdef extern from "include/core/SkPaint.h":
+    enum SkLineCap "SkPaint::Cap":
+        kButt_Cap "SkPaint::Cap::kButt_Cap",
+        kRound_Cap "SkPaint::Cap::kRound_Cap",
+        kSquare_Cap "SkPaint::Cap::kSquare_Cap"
+
+    enum SkLineJoin "SkPaint::Join":
+        kMiter_Join "SkPaint::Join::kMiter_Join",
+        kRound_Join "SkPaint::Join::kRound_Join",
+        kBevel_Join "SkPaint::Join::kBevel_Join"
+
+
+cdef extern from "include/core/SkStrokeRec.h":
+    cdef cppclass SkStrokeRec:
+        SkStrokeRec(InitStyle style)
+        void setStrokeStyle(SkScalar width, bint strokeAndFill)
+        void setStrokeParams(SkLineCap cap, SkLineJoin join, SkScalar miterLimit)
+        bint applyToPath(SkPath* dst, const SkPath& src) const;
+
+
+cdef extern from * namespace "SkStrokeRec":
+    enum InitStyle:
+        kHairline_InitStyle,
+        kFill_InitStyle

@@ -4,6 +4,10 @@ from ._pathops import (
     PathVerb,
     PathOp,
     FillType,
+    LineCap,
+    LineJoin,
+    ArcSize,
+    Direction,
     op,
     simplify,
     OpBuilder,
@@ -12,6 +16,7 @@ from ._pathops import (
     OpenPathError,
     bits2float,
     float2bits,
+    decompose_quadratic_segment,
 )
 
 from .operations import (
