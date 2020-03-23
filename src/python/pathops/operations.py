@@ -1,7 +1,7 @@
 from functools import partial
 from . import Path, PathOp, op
 
-__all__ = [op.name.lower() for op in PathOp]
+__all__ = [operation.name.lower() for operation in PathOp]
 
 def _draw(contours):
     path = Path()
@@ -34,6 +34,6 @@ def _do(
     result.draw(outpen)
 
 # generate self-similar operations
-for op in PathOp:
-    if op == PathOp.UNION: continue
-    globals()[op.name.lower()] = partial(_do, op)
+for op_ in PathOp:
+    if op_ == PathOp.UNION: continue
+    globals()[op_.name.lower()] = partial(_do, op_)
