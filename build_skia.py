@@ -8,6 +8,7 @@ if py_ver > (2, 7):
 import argparse
 import glob
 import os
+import shutil
 import subprocess
 
 
@@ -97,6 +98,28 @@ def make_virtualenv(venv_dir):
     return env
 
 
+# as supported by shutil.make_archive
+ARCHIVE_FORMATS = {
+    ".zip": "zip",
+    ".tar": "tar",
+    ".tar.gz": "gztar",
+    ".tar.bz2": "bztar",
+}
+
+
+def _split_archive_base_and_format(parser, fname):
+    for ext in ARCHIVE_FORMATS:
+        if fname.endswith(ext):
+            fmt = ARCHIVE_FORMATS[ext]
+            break
+    else:
+        parser.error(
+            "Invalid archive file extension {fname!r}. "
+            "Choose from {formats}".format(fname=fname, formats=list(ARCHIVE_FORMATS))
+        )
+    return fname.split(ext)[0], fmt
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -117,7 +140,13 @@ if __name__ == "__main__":
         help="The desired CPU architecture for the build (default: host)",
         choices=["x86", "x64", "arm", "arm64", "mipsel"]
     )
+    parser.add_argument("-a", "--archive-file", default=None)
     args = parser.parse_args()
+
+    if args.archive_file is not None:
+        archive_base, archive_fmt = _split_archive_base_and_format(
+            parser, args.archive_file
+        )
 
     build_dir = os.path.abspath(args.build_dir)
     venv_dir = os.path.join(build_dir, "venv2")
@@ -153,3 +182,8 @@ if __name__ == "__main__":
     if sys.platform == "win32" and args.shared_lib:
         for f in glob.glob(os.path.join(build_dir, "skia.dll.*")):
             os.rename(f, f.replace(".dll", ""))
+
+    if args.archive_file is not None:
+        # we pack the whole build_dir except for the venv2/ subdir
+        shutil.rmtree(venv_dir)
+        shutil.make_archive(archive_base, archive_fmt, build_dir)
