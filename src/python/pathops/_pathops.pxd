@@ -15,6 +15,7 @@ from ._skia.core cimport (
     kSmall_ArcSize,
     kLarge_ArcSize,
     SkPathDirection,
+    SkMatrix,
 )
 from ._skia.pathops cimport (
     SkOpBuilder,
@@ -170,6 +171,19 @@ cdef class Path:
     cdef int countContours(self) except -1
 
     cdef int getFirstPoints(self, SkPoint **pp, int *count) except -1
+
+    cpdef Path transform(
+        self,
+        SkScalar scaleX=*,
+        SkScalar skewY=*,
+        SkScalar skewX=*,
+        SkScalar scaleY=*,
+        SkScalar translateX=*,
+        SkScalar translateY=*,
+        SkScalar perspectiveX=*,
+        SkScalar perspectiveY=*,
+        SkScalar perspectiveBias=*,
+    )
 
 
 cpdef enum PathVerb:

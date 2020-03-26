@@ -22,6 +22,24 @@ cdef extern from "include/core/SkPathTypes.h":
         kCCW "SkPathDirection::kCCW"
 
 
+cdef extern from "include/core/SkMatrix.h":
+    cdef cppclass SkMatrix:
+        SkMatrix() except +
+
+        @staticmethod
+        SkMatrix MakeAll(
+            SkScalar scaleX,
+            SkScalar skewX,
+            SkScalar transX,
+            SkScalar skewY,
+            SkScalar scaleY,
+            SkScalar transY,
+            SkScalar pers0,
+            SkScalar pers1,
+            SkScalar pers2,
+        )
+
+
 cdef extern from "include/core/SkPath.h":
 
     cdef cppclass SkPoint:
@@ -132,6 +150,8 @@ cdef extern from "include/core/SkPath.h":
             Verb peek()
 
             SkScalar conicWeight()
+
+        void transform(const SkMatrix& matrix, SkPath* dst) const
 
 
 cdef extern from * namespace "SkPath":
