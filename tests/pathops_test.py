@@ -118,6 +118,44 @@ class PathTest(object):
             # ('lineTo', ((100.0, 100.0),)),
             ('closePath', ())]
 
+    def test_transform(self):
+        path = Path()
+        path.moveTo(125, 376)
+        path.cubicTo(181, 376, 218, 339, 218, 290)
+        path.cubicTo(218, 225, 179, 206, 125, 206)
+        path.close()
+
+        # t = Transform().rotate(radians(-45)).translate(-100, 0)
+        matrix = (0.707107, -0.707107, 0.707107, 0.707107, -70.7107, 70.7107)
+
+        result = path.transform(*matrix)
+
+        expected = Path()
+        expected.moveTo(
+            bits2float(0x438dc663),  # 283.55
+            bits2float(0x437831ce),  # 248.195
+        )
+        expected.cubicTo(
+            bits2float(0x43a192ee),  # 323.148
+            bits2float(0x435098b8),  # 208.597
+            bits2float(0x43a192ee),  # 323.148
+            bits2float(0x431c454a),  # 156.271
+            bits2float(0x43903ff5),  # 288.5
+            bits2float(0x42f33ead),  # 121.622
+        )
+        expected.cubicTo(
+            bits2float(0x437289a8),  # 242.538
+            bits2float(0x42975227),  # 75.6605
+            bits2float(0x43498688),  # 201.526
+            bits2float(0x42b39aee),  # 89.8026
+            bits2float(0x4323577c),  # 163.342
+            bits2float(0x42fff906),  # 127.986
+        )
+        expected.close()
+
+        result.dump(as_hex=True)
+        assert result == expected
+
 
 class OpBuilderTest(object):
 
