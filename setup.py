@@ -247,8 +247,9 @@ class custom_build_ext(build_ext):
 
 def build_skia(build_base):
     log.info("building 'skia' library")
-    build_dir = os.path.join(build_base, "src", "cpp", "skia")
-    build_cmd = [PYTHON2_EXE, "build_skia.py", build_dir]
+    build_dir = os.path.join(build_base, skia_dir)
+    build_skia_py = os.path.join(skia_builder_dir, "build_skia.py")
+    build_cmd = [PYTHON2_EXE, build_skia_py, build_dir]
 
     env = os.environ.copy()
     if sys.platform == "win32":
@@ -274,8 +275,8 @@ if BUILD_SKIA_FROM_SOURCE:
 
 
 pkg_dir = os.path.join("src", "python")
-cpp_dir = os.path.join("src", "cpp")
-skia_dir = os.path.join(cpp_dir, "skia")
+skia_builder_dir = os.path.join("src", "cpp", "skia-builder")
+skia_dir = os.path.join(skia_builder_dir, "skia")
 skia_src_dir = os.path.join(skia_dir, "src") # allow access to internals
 
 include_dirs = [skia_dir, skia_src_dir]
