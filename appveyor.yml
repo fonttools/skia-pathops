@@ -8,37 +8,25 @@ environment:
   TWINE_PASSWORD:
     secure: 9L/DdqoIILlN7qCh0lotvA==
   PYTHON2_EXE: "C:\\Python27\\python.exe"
+  BUILD_SKIA_FROM_SOURCE: "0"
+  SKIA_LIBRARY_DIR: "build\\download"
+  DOWNLOAD_SKIA_SCRIPT: "ci\\download_libskia.py"
+  GITHUB_TOKEN:
+    secure: u8SBO+xCC7mI3SGCbaIZtyLi8+j/g92iA+E2p1iy05WoNed6sIwe3o9odK3bjO5J
   matrix:
     - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "32"
-
     - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
-
     - PYTHON: "C:\\Python37"
-      PYTHON_VERSION: "3.7"
-      PYTHON_ARCH: "32"
-
     - PYTHON: "C:\\Python37-x64"
-      PYTHON_VERSION: "3.7"
-      PYTHON_ARCH: "64"
-
     - PYTHON: "C:\\Python38"
-      PYTHON_VERSION: "3.8"
-      PYTHON_ARCH: "32"
-
     - PYTHON: "C:\\Python38-x64"
-      PYTHON_VERSION: "3.8"
-      PYTHON_ARCH: "64"
 
 init:
-  - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
+  - "ECHO %PYTHON%"
 
 install:
-  # checkout git sub-modules
-  - git submodule update --init --recursive
+  # checkout git sub-modules (shallow fetch)
+  - git submodule update --init --recursive --depth 1
 
   # prepend newly installed Python to the PATH
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
@@ -54,11 +42,16 @@ install:
   # upgrade setuptools and virtualenv
   - pip install --upgrade setuptools wheel virtualenv
 
+  # install build requirements
+  - pip install setuptools_scm cython
+
   # install tox to run test suite in a virtual environment
   - pip install --upgrade tox
 
+  # download pre-compiled libskia
+  - cmd: IF "%BUILD_SKIA_FROM_SOURCE%"=="0" ( pip install githubrelease && python "%DOWNLOAD_SKIA_SCRIPT%" )
   # build wheel
-  - pip wheel -v --no-deps --wheel-dir dist .
+  - python setup.py bdist_wheel
   # get the full path to the compiled wheel (ugly but works)
   - dir /s /b dist\skia_pathops*.whl > wheel.pth
   - set /p WHEEL_PATH=<wheel.pth

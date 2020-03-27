@@ -4,3 +4,4 @@
 [submodule "src/cpp/skia-builder"]
 	path = src/cpp/skia-builder
 	url = https://github.com/fonttools/skia-builder
+	shallow = true
