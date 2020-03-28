@@ -1,7 +1,15 @@
 from functools import partial
 from . import Path, PathOp, op
 
-__all__ = [operation.name.lower() for operation in PathOp]
+
+__all__ = [
+    "difference",
+    "intersection",
+    "reverse_difference",
+    "union",
+    "xor",
+]
+
 
 def _draw(contours):
     path = Path()
@@ -9,6 +17,7 @@ def _draw(contours):
     for contour in contours:
         contour.draw(pen)
     return path
+
 
 def union(contours, outpen, fix_winding=True, keep_starting_points=True):
     if not contours:
@@ -19,6 +28,7 @@ def union(contours, outpen, fix_winding=True, keep_starting_points=True):
         keep_starting_points=keep_starting_points
     )
     path.draw(outpen)
+
 
 def _do(
     operator,
@@ -33,7 +43,9 @@ def _do(
     result = op(one, two, operator, fix_winding, keep_starting_points)
     result.draw(outpen)
 
+
 # generate self-similar operations
-for op_ in PathOp:
-    if op_ == PathOp.UNION: continue
-    globals()[op_.name.lower()] = partial(_do, op_)
+for operation in PathOp:
+    if operation == PathOp.UNION:
+        continue
+    globals()[operation.name.lower()] = partial(_do, operation)
