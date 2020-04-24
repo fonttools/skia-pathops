@@ -453,10 +453,6 @@ cdef class Path:
         finally:
             del stroke_rec
 
-        # Nuke any conics that snuck in
-        self.convertConicsToQuads()
-
-
     cdef list getVerbs(self):
         cdef int i, count
         cdef uint8_t *verbs
