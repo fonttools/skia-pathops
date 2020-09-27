@@ -158,7 +158,12 @@ cdef class Path:
 
     cpdef reverse(self)
 
-    cpdef simplify(self, bint fix_winding=*, bint keep_starting_points=*)
+    cpdef simplify(
+        self,
+        bint fix_winding=*,
+        bint keep_starting_points=*,
+        bint clockwise=*,
+    )
 
     cpdef convertConicsToQuads(self, float tolerance=*)
 
@@ -279,7 +284,7 @@ cdef int path_is_inside(const SkPath& self, const SkPath& other) except -1
 cpdef int restore_starting_points(Path path, list points) except -1
 
 
-cpdef bint winding_from_even_odd(Path path, bint truetype=*) except False
+cpdef bint winding_from_even_odd(Path path, bint clockwise=*) except False
 
 
 cdef list _decompose_quadratic_segment(tuple points)
@@ -309,10 +314,16 @@ cpdef Path op(
     SkPathOp operator,
     bint fix_winding=*,
     bint keep_starting_points=*,
+    bint clockwise=*,
 )
 
 
-cpdef Path simplify(Path path, bint fix_winding=*, bint keep_starting_points=*)
+cpdef Path simplify(
+    Path path,
+    bint fix_winding=*,
+    bint keep_starting_points=*,
+    bint clockwise=*,
+)
 
 
 cdef class OpBuilder:
@@ -321,6 +332,7 @@ cdef class OpBuilder:
     cdef bint fix_winding
     cdef bint keep_starting_points
     cdef list first_points
+    cdef bint clockwise
 
     cpdef add(self, Path path, SkPathOp operator)
 
