@@ -158,7 +158,7 @@ cdef class Path:
 
     cpdef reverse(self)
 
-    cpdef simplify(self, bint fix_winding=*, keep_starting_points=*)
+    cpdef simplify(self, bint fix_winding=*, bint keep_starting_points=*)
 
     cpdef convertConicsToQuads(self, float tolerance=*)
 
@@ -307,12 +307,12 @@ cpdef Path op(
     Path one,
     Path two,
     SkPathOp operator,
-    fix_winding=*,
-    keep_starting_points=*,
+    bint fix_winding=*,
+    bint keep_starting_points=*,
 )
 
 
-cpdef Path simplify(Path path, fix_winding=*, keep_starting_points=*)
+cpdef Path simplify(Path path, bint fix_winding=*, bint keep_starting_points=*)
 
 
 cdef class OpBuilder:

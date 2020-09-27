@@ -345,7 +345,7 @@ cdef class Path:
             skpath.addPath(contour.path)
         self.path = skpath
 
-    cpdef simplify(self, bint fix_winding=True, keep_starting_points=True):
+    cpdef simplify(self, bint fix_winding=True, bint keep_starting_points=True):
         cdef list first_points
         if keep_starting_points:
             first_points = self.firstPoints
@@ -626,10 +626,10 @@ cdef class Path:
         >>> affine = (2, 0, 0, 2, 0, 0)
         >>> p2 = p1.transform(*affine)
         >>> list(p2.segments) == [
-            ('moveTo', ((2.0, 4.0),)),
-            ('lineTo', ((6.0, 8.0),)),
-            ('endPath', ()),
-        ]
+        ...    ('moveTo', ((2.0, 4.0),)),
+        ...    ('lineTo', ((6.0, 8.0),)),
+        ...    ('endPath', ()),
+        ... ]
         True
         """
         cdef SkMatrix matrix = SkMatrix.MakeAll(
@@ -1374,8 +1374,8 @@ cpdef Path op(
     Path one,
     Path two,
     SkPathOp operator,
-    fix_winding=True,
-    keep_starting_points=True
+    bint fix_winding=True,
+    bint keep_starting_points=True
 ):
     cdef list first_points
     if keep_starting_points:
@@ -1390,7 +1390,7 @@ cpdef Path op(
     return result
 
 
-cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
+cpdef Path simplify(Path path, bint fix_winding=True, bint keep_starting_points=True):
     cdef list first_points
     if keep_starting_points:
         first_points = path.firstPoints
@@ -1406,7 +1406,7 @@ cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
 
 cdef class OpBuilder:
 
-    def __init__(self, bint fix_winding=True, keep_starting_points=True):
+    def __init__(self, bint fix_winding=True, bint keep_starting_points=True):
         self.fix_winding = fix_winding
         self.keep_starting_points = keep_starting_points
         self.first_points = []
