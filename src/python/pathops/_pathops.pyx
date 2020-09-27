@@ -345,14 +345,19 @@ cdef class Path:
             skpath.addPath(contour.path)
         self.path = skpath
 
-    cpdef simplify(self, bint fix_winding=True, keep_starting_points=True):
+    cpdef simplify(
+        self,
+        bint fix_winding=True,
+        bint keep_starting_points=True,
+        bint clockwise=False,
+    ):
         cdef list first_points
         if keep_starting_points:
             first_points = self.firstPoints
         if not Simplify(self.path, &self.path):
             raise PathOpsError("simplify operation did not succeed")
         if fix_winding:
-            winding_from_even_odd(self)
+            winding_from_even_odd(self, clockwise)
         if keep_starting_points:
             restore_starting_points(self, first_points)
 
@@ -626,10 +631,10 @@ cdef class Path:
         >>> affine = (2, 0, 0, 2, 0, 0)
         >>> p2 = p1.transform(*affine)
         >>> list(p2.segments) == [
-            ('moveTo', ((2.0, 4.0),)),
-            ('lineTo', ((6.0, 8.0),)),
-            ('endPath', ()),
-        ]
+        ...    ('moveTo', ((2.0, 4.0),)),
+        ...    ('lineTo', ((6.0, 8.0),)),
+        ...    ('endPath', ()),
+        ... ]
         True
         """
         cdef SkMatrix matrix = SkMatrix.MakeAll(
@@ -1116,23 +1121,23 @@ DEF DEBUG_WINDING = False
 
 @cython.wraparound(False)
 @cython.boundscheck(False)
-cpdef bint winding_from_even_odd(Path path, bint truetype=False) except False:
+cpdef bint winding_from_even_odd(Path path, bint clockwise=False) except False:
     """ Take a simplified path (without overlaps) and set the contours
     directions according to the non-zero winding fill type.
     The outermost contours are set to counter-clockwise direction, unless
-    'truetype' is True.
+    'clockwise' is True.
     """
     # TODO re-enable this once the new feature is stabilized in upstream skia
     # https://github.com/fonttools/skia-pathops/issues/10
     # if AsWinding(path.path, &path.path):
-    #     if path.clockwise ^ truetype:
+    #     if path.clockwise ^ clockwise:
     #         path.reverse()
     #     return True
     #
     # # in the unlikely event the built-in method fails, try our naive approach
 
     cdef int i, j
-    cdef bint inverse = not truetype
+    cdef bint inverse = not clockwise
     cdef bint is_clockwise, is_even
     cdef Path contour, other
 
@@ -1374,8 +1379,9 @@ cpdef Path op(
     Path one,
     Path two,
     SkPathOp operator,
-    fix_winding=True,
-    keep_starting_points=True
+    bint fix_winding=True,
+    bint keep_starting_points=True,
+    bint clockwise=False,
 ):
     cdef list first_points
     if keep_starting_points:
@@ -1384,13 +1390,18 @@ cpdef Path op(
     if not Op(one.path, two.path, operator, &result.path):
         raise PathOpsError("operation did not succeed")
     if fix_winding:
-        winding_from_even_odd(result)
+        winding_from_even_odd(result, clockwise)
     if keep_starting_points:
         restore_starting_points(result, first_points)
     return result
 
 
-cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
+cpdef Path simplify(
+    Path path,
+    bint fix_winding=True,
+    bint keep_starting_points=True,
+    bint clockwise=False,
+):
     cdef list first_points
     if keep_starting_points:
         first_points = path.firstPoints
@@ -1398,7 +1409,7 @@ cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
     if not Simplify(path.path, &result.path):
         raise PathOpsError("operation did not succeed")
     if fix_winding:
-        winding_from_even_odd(result)
+        winding_from_even_odd(result, clockwise)
     if keep_starting_points:
         restore_starting_points(result, first_points)
     return result
@@ -1406,10 +1417,16 @@ cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
 
 cdef class OpBuilder:
 
-    def __init__(self, bint fix_winding=True, keep_starting_points=True):
+    def __init__(
+        self,
+        bint fix_winding=True,
+        bint keep_starting_points=True,
+        bint clockwise=False,
+    ):
         self.fix_winding = fix_winding
         self.keep_starting_points = keep_starting_points
         self.first_points = []
+        self.clockwise = clockwise
 
     cpdef add(self, Path path, SkPathOp operator):
         self.builder.add(path.path, operator)
@@ -1421,7 +1438,7 @@ cdef class OpBuilder:
         if not self.builder.resolve(&result.path):
             raise PathOpsError("operation did not succeed")
         if self.fix_winding:
-            winding_from_even_odd(result)
+            winding_from_even_odd(result, self.clockwise)
         if self.keep_starting_points:
             restore_starting_points(result, self.first_points)
         return result
