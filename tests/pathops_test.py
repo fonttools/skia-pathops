@@ -10,6 +10,7 @@ from pathops import (
     float2bits,
     ArcSize,
     Direction,
+    simplify,
 )
 
 import pytest
@@ -790,3 +791,62 @@ def test_path_operation(message, operations, expected):
             round_pts.append(tuple(round(c, 2) for c in pt))
         rounded.append((verb, tuple(round_pts)))
     assert tuple(rounded) == expected, message
+
+
+
+@pytest.fixture
+def overlapping_path():
+    path = Path()
+    path.moveTo(0, 0)
+    path.lineTo(10, 0)
+    path.lineTo(10, 10)
+    path.lineTo(0, 10)
+    path.close()
+    path.moveTo(5, 5)
+    path.lineTo(15, 5)
+    path.lineTo(15, 15)
+    path.lineTo(5, 15)
+    path.close()
+    return path
+
+
+def test_simplify(overlapping_path):
+    result = simplify(overlapping_path)
+
+    assert overlapping_path != result
+    assert list(result) == [
+        (PathVerb.MOVE, ((0, 0),)),
+        (PathVerb.LINE, ((10, 0),)),
+        (PathVerb.LINE, ((10, 5),)),
+        (PathVerb.LINE, ((15, 5),)),
+        (PathVerb.LINE, ((15, 15),)),
+        (PathVerb.LINE, ((5, 15),)),
+        (PathVerb.LINE, ((5, 10),)),
+        (PathVerb.LINE, ((0, 10),)),
+        (PathVerb.CLOSE, ()),
+    ]
+
+    overlapping_path.simplify()
+
+    assert overlapping_path == result
+
+
+def test_simplify_clockwise(overlapping_path):
+    result = simplify(overlapping_path, clockwise=True)
+
+    assert overlapping_path != result
+    assert list(result) == [
+        (PathVerb.MOVE, ((0, 0),)),
+        (PathVerb.LINE, ((0, 10),)),
+        (PathVerb.LINE, ((5, 10),)),
+        (PathVerb.LINE, ((5, 15),)),
+        (PathVerb.LINE, ((15, 15),)),
+        (PathVerb.LINE, ((15, 5),)),
+        (PathVerb.LINE, ((10, 5),)),
+        (PathVerb.LINE, ((10, 0),)),
+        (PathVerb.CLOSE, ()),
+    ]
+
+    overlapping_path.simplify(clockwise=True)
+
+    assert overlapping_path == result
