@@ -790,5 +790,3 @@ def test_path_operation(message, operations, expected):
             round_pts.append(tuple(round(c, 2) for c in pt))
         rounded.append((verb, tuple(round_pts)))
     assert tuple(rounded) == expected, message
-
-

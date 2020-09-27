@@ -1395,7 +1395,7 @@ cpdef Path simplify(Path path, fix_winding=True, keep_starting_points=True):
     if keep_starting_points:
         first_points = path.firstPoints
     cdef Path result = Path()
-    if Simplify(path.path, &result.path):
+    if not Simplify(path.path, &result.path):
         raise PathOpsError("operation did not succeed")
     if fix_winding:
         winding_from_even_odd(result)
