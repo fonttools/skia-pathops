@@ -24,6 +24,12 @@ environment:
 init:
   - "ECHO %PYTHON%"
 
+branches:
+  only:
+    - master
+    # We want to build version tags as well.
+    - /v^\d+\.\d+.*$/
+
 install:
   # checkout git sub-modules (shallow fetch)
   - git submodule update --init --recursive --depth 1
