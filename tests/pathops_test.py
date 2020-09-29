@@ -157,6 +157,53 @@ class PathTest(object):
         result.dump(as_hex=True)
         assert result == expected
 
+    def test_pen_addComponent_missing_required_glyphSet(self):
+        path = Path()
+        pen = path.getPen()
+        with pytest.raises(TypeError, match="Missing required glyphSet"):
+            pen.addComponent("a", (1, 0, 0, 1, 0, 0))
+
+    def test_pen_addComponent_decomposed_from_glyphSet(self):
+        a = Path()
+        a.moveTo(0, 0)
+        a.lineTo(1, 0)
+        a.lineTo(1, 1)
+        a.lineTo(0, 1)
+        a.close()
+        glyphSet = {"a": a}
+
+        b = Path()
+        pen = b.getPen(glyphSet=glyphSet)
+        pen.addComponent("a", (2, 0, 0, 2, 10, 10))
+        glyphSet["b"] = b
+
+        assert list(b) == [
+            (PathVerb.MOVE, ((10, 10),)),
+            (PathVerb.LINE, ((12, 10),)),
+            (PathVerb.LINE, ((12, 12),)),
+            (PathVerb.LINE, ((10, 12),)),
+            (PathVerb.CLOSE, ()),
+        ]
+
+        c = Path()
+        pen = c.getPen(glyphSet=glyphSet)
+        pen.addComponent("a", (1, 0, 0, 1, 2, 2))
+        pen.addComponent("b", (1, 0, 0, 1, -10, -10))
+        glyphSet["c"] = c
+
+        assert list(c) == [
+            (PathVerb.MOVE, ((2, 2),)),
+            (PathVerb.LINE, ((3, 2),)),
+            (PathVerb.LINE, ((3, 3),)),
+            (PathVerb.LINE, ((2, 3),)),
+            (PathVerb.CLOSE, ()),
+            (PathVerb.MOVE, ((0, 0),)),
+            (PathVerb.LINE, ((2, 0),)),
+            (PathVerb.LINE, ((2, 2),)),
+            (PathVerb.LINE, ((0, 2),)),
+            (PathVerb.CLOSE, ()),
+        ]
+
 
 class OpBuilderTest(object):
 

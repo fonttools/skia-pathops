@@ -102,7 +102,7 @@ cdef class Path:
     @staticmethod
     cdef Path create(const SkPath& path)
 
-    cpdef PathPen getPen(self, bint allow_open_paths=*)
+    cpdef PathPen getPen(self, object glyphSet=*, bint allow_open_paths=*)
 
     cpdef void moveTo(self, SkScalar x, SkScalar y)
 
@@ -232,6 +232,7 @@ cdef class SegmentPenIterator:
 cdef class PathPen:
 
     cdef Path path
+    cdef object glyphSet
     cdef bint allow_open_paths
 
     cpdef moveTo(self, pt)
