@@ -160,7 +160,7 @@ class PathTest(object):
     def test_pen_addComponent_missing_required_glyphSet(self):
         path = Path()
         pen = path.getPen()
-        with pytest.raises(ValueError, match="Missing required glyphSet"):
+        with pytest.raises(TypeError, match="Missing required glyphSet"):
             pen.addComponent("a", (1, 0, 0, 1, 0, 0))
 
     def test_pen_addComponent_decomposed_from_glyphSet(self):

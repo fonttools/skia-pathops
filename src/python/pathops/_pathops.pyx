@@ -895,7 +895,7 @@ cdef class PathPen:
 
     cpdef addComponent(self, glyphName, transformation):
         if self.glyphSet is None:
-            raise ValueError("Missing required glyphSet; can't decompose components")
+            raise TypeError("Missing required glyphSet; can't decompose components")
 
         base_glyph = self.glyphSet[glyphName]
         cdef Path base_path = Path()
