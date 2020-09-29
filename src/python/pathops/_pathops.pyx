@@ -150,8 +150,8 @@ cdef class Path:
         self.path = path
         return self
 
-    cpdef PathPen getPen(self, bint allow_open_paths=True):
-        return PathPen(self, allow_open_paths=allow_open_paths)
+    cpdef PathPen getPen(self, object glyphSet=None, bint allow_open_paths=True):
+        return PathPen(self, glyphSet=glyphSet, allow_open_paths=allow_open_paths)
 
     def __iter__(self):
         return RawPathIterator(self)
@@ -861,8 +861,9 @@ cdef class SegmentPenIterator:
 
 cdef class PathPen:
 
-    def __cinit__(self, Path path, bint allow_open_paths=True):
+    def __cinit__(self, Path path, object glyphSet=None, bint allow_open_paths=True):
         self.path = path
+        self.glyphSet = glyphSet
         self.allow_open_paths = allow_open_paths
 
     cpdef moveTo(self, pt):
@@ -893,7 +894,15 @@ cdef class PathPen:
             raise OpenPathError()
 
     cpdef addComponent(self, glyphName, transformation):
-        pass
+        if self.glyphSet is None:
+            raise ValueError("Missing required glyphSet; can't decompose components")
+
+        base_glyph = self.glyphSet[glyphName]
+        cdef Path base_path = Path()
+        base_glyph.draw(base_path.getPen(glyphSet=self.glyphSet))
+        cdef Path component_path = base_path.transform(*transformation)
+
+        self.path.addPath(component_path)
 
 
 cdef double get_path_area(const SkPath& path) except? -1234567:
