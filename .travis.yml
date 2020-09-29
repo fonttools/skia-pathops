@@ -15,6 +15,12 @@ language: generic
 dist: xenial
 services: docker
 
+branches:
+  only:
+    - master
+    # We want to build version tags as well.
+    - /^v\d+\.\d+.*$/
+
 matrix:
   include:
     - os: linux
