@@ -32,7 +32,7 @@ from ._skia.pathops cimport (
     kReverseDifference_SkPathOp,
 )
 from libc.stdint cimport uint8_t, int32_t, uint32_t
-from libc.math cimport fabs, sqrt
+from libc.math cimport fabs, sqrt, isfinite
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from libc.string cimport memset
 cimport cython
@@ -1388,6 +1388,12 @@ DEF MAX_CONIC_TO_QUAD_POW2 = 5
 cdef int compute_conic_to_quad_pow2(
     SkPoint p0, SkPoint p1, SkPoint p2, SkScalar weight, SkScalar tol
 ) except -1:
+    if tol < 0 or not all(
+        isfinite(v)
+        for v in (tol, weight, p0.x(), p0.y(), p1.x(), p1.y(), p2.x(), p2.y())
+    ):
+        return 0
+
     cdef SkScalar a = weight - 1
     cdef SkScalar k = a / (4 * (2 + a))
     cdef SkScalar x = k * (p0.x() - 2 * p1.x() + p2.x())

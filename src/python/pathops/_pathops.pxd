@@ -309,6 +309,11 @@ cdef int contour_is_closed(const uint8_t *verbs, int verb_count) except -1
 cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
 
 
+cdef int compute_conic_to_quad_pow2(
+    SkPoint p0, SkPoint p1, SkPoint p2, SkScalar weight, SkScalar tol
+) except -1
+
+
 cpdef Path op(
     Path one,
     Path two,
