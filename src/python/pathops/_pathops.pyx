@@ -1383,11 +1383,14 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
 
 DEF MAX_CONIC_TO_QUAD_POW2 = 5
 
-# SkConic.computeQuadPOW2 is not public, we reimplemented it in Cython below.
-# Source: https://github.com/google/skia/blob/52a4379f03f7cd4e1c67eb69a756abc5838a658f/src/core/SkGeometry.cpp#L1198-L1231
 cdef int compute_conic_to_quad_pow2(
     SkPoint p0, SkPoint p1, SkPoint p2, SkScalar weight, SkScalar tol
 ) except -1:
+    # Return the power-of-2 number of quads needed to approximate this conic
+    # with a sequence of quads (will be >= 0). This is used to determine the optimal
+    # (within tolerance) 'pow2' parameter when calling SkPath::ConvertConicToQuads.
+    # Copied from SkConic::computeQuadPOW2 method in src/core/SkGeometry.cpp:
+    # https://github.com/google/skia/blob/52a4379f03f7cd4e1c67eb69a756abc5838a658f/src/core/SkGeometry.cpp#L1198-L1231
     if tol < 0 or not all(
         isfinite(v)
         for v in (tol, weight, p0.x(), p0.y(), p1.x(), p1.y(), p2.x(), p2.y())
