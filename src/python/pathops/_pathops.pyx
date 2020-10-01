@@ -1,5 +1,4 @@
 from ._skia.core cimport (
-    SkConic,
     SkPath,
     SkPathFillType,
     SkPoint,
@@ -33,7 +32,7 @@ from ._skia.pathops cimport (
     kReverseDifference_SkPathOp,
 )
 from libc.stdint cimport uint8_t, int32_t, uint32_t
-from libc.math cimport fabs
+from libc.math cimport fabs, sqrt, isfinite
 from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from libc.string cimport memset
 cimport cython
@@ -385,12 +384,11 @@ cdef class Path:
         cdef SkPathFillType fillType = self.path.getFillType()
         temp.setFillType(fillType)
 
-        cdef SkConic conic
         cdef SkPoint p0
         cdef SkPoint p1
         cdef SkPoint p2
         cdef SkScalar weight
-        cdef pow2
+        cdef int pow2
 
         try:
             prev = (0., 0.)
@@ -425,8 +423,7 @@ cdef class Path:
                 p2 = SkPoint.Make(pts[1][0], pts[1][1])
                 weight = pts[2]
 
-                conic.set(p0, p1, p2, weight)
-                pow2 = conic.computeQuadPOW2(tolerance)
+                pow2 = compute_conic_to_quad_pow2(p0, p1, p2, weight, tolerance)
                 assert pow2 <= max_pow2
                 num_quads = ConvertConicToQuads(p0, p1, p2,
                                                 weight, quad_pts,
@@ -1382,6 +1379,37 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
 
     path.close()
     return 1
+
+
+DEF MAX_CONIC_TO_QUAD_POW2 = 5
+
+cdef int compute_conic_to_quad_pow2(
+    SkPoint p0, SkPoint p1, SkPoint p2, SkScalar weight, SkScalar tol
+) except -1:
+    # Return the power-of-2 number of quads needed to approximate this conic
+    # with a sequence of quads (will be >= 0). This is used to determine the optimal
+    # (within tolerance) 'pow2' parameter when calling SkPath::ConvertConicToQuads.
+    # Copied from SkConic::computeQuadPOW2 method in src/core/SkGeometry.cpp:
+    # https://github.com/google/skia/blob/52a4379f03f7cd4e1c67eb69a756abc5838a658f/src/core/SkGeometry.cpp#L1198-L1231
+    if tol < 0 or not all(
+        isfinite(v)
+        for v in (tol, weight, p0.x(), p0.y(), p1.x(), p1.y(), p2.x(), p2.y())
+    ):
+        return 0
+
+    cdef SkScalar a = weight - 1
+    cdef SkScalar k = a / (4 * (2 + a))
+    cdef SkScalar x = k * (p0.x() - 2 * p1.x() + p2.x())
+    cdef SkScalar y = k * (p0.y() - 2 * p1.y() + p2.y())
+
+    cdef SkScalar error = sqrt(x * x + y * y)
+    cdef int pow2
+
+    for pow2 in range(MAX_CONIC_TO_QUAD_POW2):
+        if error <= tol:
+            break
+        error *= 0.25
+    return pow2
 
 
 cpdef Path op(
