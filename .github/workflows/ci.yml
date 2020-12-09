@@ -41,7 +41,8 @@ jobs:
       run: |
         if [ "macos-latest" == "${{ matrix.os }}" ]; then echo "TRAVIS_OS_NAME=osx" >> $GITHUB_ENV; else echo "TRAVIS_OS_NAME=${{ matrix.os }}" >> $GITHUB_ENV; fi
     - name: Print some Environment variable
-      run: echo "TRAVIS_OS_NAME: ${TRAVIS_OS_NAME}"
+      run: |
+        echo "TRAVIS_OS_NAME: ${TRAVIS_OS_NAME}"
     - name: Install virtualenv
       run: |
         python -m pip install --upgrade pip
