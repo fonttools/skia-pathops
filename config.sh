@@ -1,6 +1,12 @@
 # Define custom utilities
 # Test for OSX with [ -n "$IS_OSX" ]
 
+# override pip_wheel_cmd to make pip more verbose while building the wheel
+function pip_wheel_cmd {
+    local abs_wheelhouse=$1
+    pip wheel $(pip_opts) -v -w $abs_wheelhouse --no-deps .
+}
+
 function pre_build {
     # Any stuff that you need to do before you start building the wheels
     # Runs in the root directory of this repository.
