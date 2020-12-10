@@ -28,6 +28,7 @@ jobs:
       TEST_DEPENDS: "tox"
       MB_PYTHON_VERSION: ${{ matrix.python-version }}
       TRAVIS_PYTHON_VERSION: ${{ matrix.python-version }}
+      DOWNLOAD_DIR: "build/download"
 
     steps:
     - uses: actions/checkout@v2
@@ -37,16 +38,27 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Setup Environment variables
+    - name: Set up environment variables
       run: |
-        if [ "macos-latest" == "${{ matrix.os }}" ]; then echo "TRAVIS_OS_NAME=osx" >> $GITHUB_ENV; else echo "TRAVIS_OS_NAME=${{ matrix.os }}" >> $GITHUB_ENV; fi
-    - name: Print some Environment variable
-      run: |
-        echo "TRAVIS_OS_NAME: ${TRAVIS_OS_NAME}"
+        if [ "macos-latest" == "${{ matrix.os }}" ]; then
+          echo "TRAVIS_OS_NAME=osx" >> $GITHUB_ENV
+          echo "BUILD_SKIA_FROM_SOURCE=1" >> $GITHUB_ENV
+        else
+          echo "TRAVIS_OS_NAME=ubuntu" >> $GITHUB_ENV
+          echo "BUILD_SKIA_FROM_SOURCE=0" >> $GITHUB_ENV
+          echo "export BUILD_SKIA_FROM_SOURCE=0" >> env_vars.sh
+          echo "export SKIA_LIBRARY_DIR=${DOWNLOAD_DIR}" >> env_vars.sh
+        fi
     - name: Install virtualenv
       run: |
         python -m pip install --upgrade pip
         pip install virtualenv
+    - name: Download pre-compiled libskia
+      run: |
+        if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
+          pip install githubrelease
+          python ci/download_libskia.py -d "${DOWNLOAD_DIR}"
+        fi
     - name: Build and Install Wheels
       run: |
         source multibuild/common_utils.sh
