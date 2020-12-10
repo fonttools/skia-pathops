@@ -54,7 +54,7 @@ jobs:
         pip install virtualenv
     - name: Download pre-compiled libskia
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
           pip install githubrelease
