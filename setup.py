@@ -344,7 +344,8 @@ setup_params = dict(
             "coverage",
             "pytest-xdist",
             "pytest-randomly",
-            "pytest-cython",
+            # https://github.com/lgpage/pytest-cython/pull/5#issuecomment-742782671
+            # "pytest-cython",
         ],
     },
     python_requires=">=3.6",
