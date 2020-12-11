@@ -1,4 +1,4 @@
-[![Travis CI Status](https://travis-ci.org/fonttools/skia-pathops.svg?branch=master)](https://travis-ci.org/fonttools/skia-pathops)
+[![Githun CI Status](https://github.com/fonttools/skia-pathops/workflows/Build%20+%20Deploy/badge.svg)](https://github.com/fonttools/skia-pathops/actions?query=workflow%3A%22Build+%2B+Deploy%22)
 [![Appveyor CI Status](https://ci.appveyor.com/api/projects/status/jv7g1e0m0vyopbej?svg=true)](https://ci.appveyor.com/project/fonttools/skia-pathops/branch/master)
 [![PyPI](https://img.shields.io/pypi/v/skia-pathops.svg)](https://pypi.org/project/skia-pathops/)
 
