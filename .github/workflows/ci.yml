@@ -94,9 +94,14 @@ jobs:
     - name: Download artifacts from build jobs
       uses: actions/download-artifact@v2
       with:
-        path: dist/
-    - name: Check all artifacts were downloaded
-      run: ls dist/*
+        path: wheelhouse/
+    - name: Move wheels to dist/ directory
+      run: |
+        ls wheelhouse/*
+        mkdir -p dist/
+        for wheel_dir in wheelhouse/skia_pathops*/; do
+          mv "${wheel_dir}"/*.whl dist/
+        done
     - name: Extract release notes from annotated tag message
       id: release_notes
       env:
