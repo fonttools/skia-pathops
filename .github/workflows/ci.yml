@@ -70,3 +70,7 @@ jobs:
         build_wheel $REPO_DIR $PLAT
         echo "------- INSTALL_RUN --------"
         install_run $PLAT
+    - uses: actions/upload-artifact@v2
+      with:
+        name: skia_pathops-${{ env.TRAVIS_OS_NAME }}-${{ matrix.python-version }}
+        path: wheelhouse/*.whl
