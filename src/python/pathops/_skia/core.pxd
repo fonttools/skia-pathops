@@ -187,7 +187,29 @@ cdef extern from "include/core/SkScalar.h":
         SK_ScalarNearlyZero
 
 
+# 'opaque' types used by SkDashPathEffect::Make and SkPaint::setPathEffect
+cdef extern from "include/core/SkRefCnt.h":
+    cdef cppclass sk_sp[T]:
+        pass
+
+
+cdef extern from "include/core/SkPathEffect.h":
+    cdef cppclass SkPathEffect:
+        pass
+
+
+cdef extern from "include/effects/SkDashPathEffect.h":
+    cdef cppclass SkDashPathEffect:
+        @staticmethod
+        sk_sp[SkPathEffect] Make(const SkScalar intervals[], int count, SkScalar phase)
+
+
 cdef extern from "include/core/SkPaint.h":
+    enum SkPaintStyle "SkPaint::Style":
+        kFill_Style "SkPaint::Style::kFill_Style",
+        kStroke_Style "SkPaint::Style::kStroke_Style",
+        kStrokeAndFill_Style "SkPaint::Style::kStrokeAndFill_Style",
+
     enum SkLineCap "SkPaint::Cap":
         kButt_Cap "SkPaint::Cap::kButt_Cap",
         kRound_Cap "SkPaint::Cap::kRound_Cap",
@@ -198,16 +220,12 @@ cdef extern from "include/core/SkPaint.h":
         kRound_Join "SkPaint::Join::kRound_Join",
         kBevel_Join "SkPaint::Join::kBevel_Join"
 
-
-cdef extern from "include/core/SkStrokeRec.h":
-    cdef cppclass SkStrokeRec:
-        SkStrokeRec(InitStyle style)
-        void setStrokeStyle(SkScalar width, bint strokeAndFill)
-        void setStrokeParams(SkLineCap cap, SkLineJoin join, SkScalar miterLimit)
-        bint applyToPath(SkPath* dst, const SkPath& src) const;
-
-
-cdef extern from * namespace "SkStrokeRec":
-    enum InitStyle:
-        kHairline_InitStyle,
-        kFill_InitStyle
+    cdef cppclass SkPaint:
+        SkPaint()
+        void setStyle(SkPaintStyle style)
+        void setStrokeWidth(SkScalar width)
+        void setStrokeCap(SkLineCap cap)
+        void setStrokeJoin(SkLineJoin join)
+        void setStrokeMiter(SkScalar miter)
+        void setPathEffect(sk_sp[SkPathEffect] pathEffect)
+        bint getFillPath(const SkPath& src, SkPath* dst) const
