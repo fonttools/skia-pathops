@@ -469,6 +469,8 @@ cdef class Path:
 
         if dash_array:
             intervals = _SkScalarArray.create(dash_array)
+            if intervals.count % 2 != 0:
+                raise ValueError("Expected an even number of dash_array entries")
             paint.setPathEffect(
                 SkDashPathEffect.Make(intervals.data, intervals.count, dash_offset)
             )
