@@ -167,7 +167,15 @@ cdef class Path:
 
     cpdef convertConicsToQuads(self, float tolerance=*)
 
-    cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit)
+    cpdef stroke(
+        self,
+        SkScalar width,
+        LineCap cap,
+        LineJoin join,
+        SkScalar miter_limit,
+        object dash_array=*,
+        SkScalar dash_offset=*,
+    )
 
     cdef list getVerbs(self)
 
@@ -271,6 +279,15 @@ cdef class _SkPointArray:
 
     @staticmethod
     cdef _SkPointArray create(const SkPath& path)
+
+
+cdef class _SkScalarArray:
+
+    cdef SkScalar *data
+    cdef int count
+
+    @staticmethod
+    cdef _SkScalarArray create(object values)
 
 
 cdef int pts_in_verb(unsigned v) except -1

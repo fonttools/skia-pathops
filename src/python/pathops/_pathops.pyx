@@ -3,7 +3,6 @@ from ._skia.core cimport (
     SkPathFillType,
     SkPoint,
     SkScalar,
-    SkStrokeRec,
     SkRect,
     SkLineCap,
     SkLineJoin,
@@ -15,9 +14,13 @@ from ._skia.core cimport (
     kCubic_Verb,
     kClose_Verb,
     kDone_Verb,
-    kFill_InitStyle,
     SK_ScalarNearlyZero,
     ConvertConicToQuads,
+    SkPaint,
+    SkPaintStyle,
+    sk_sp,
+    SkPathEffect,
+    SkDashPathEffect,
 )
 from ._skia.pathops cimport (
     Op,
@@ -445,15 +448,34 @@ cdef class Path:
 
         self.path = temp
 
-    cpdef stroke(self, SkScalar width, LineCap cap, LineJoin join, SkScalar miter_limit):
-        # Do stroke
-        stroke_rec = new SkStrokeRec(kFill_InitStyle)
-        try:
-            stroke_rec.setStrokeStyle(width, False)
-            stroke_rec.setStrokeParams(<SkLineCap>cap, <SkLineJoin>join, miter_limit)
-            stroke_rec.applyToPath(&self.path, self.path)
-        finally:
-            del stroke_rec
+    cpdef stroke(
+        self,
+        SkScalar width,
+        LineCap cap,
+        LineJoin join,
+        SkScalar miter_limit,
+        object dash_array=None,
+        SkScalar dash_offset=0.0,
+    ):
+        cdef _SkScalarArray intervals
+        cdef sk_sp[SkPathEffect] dash
+        cdef SkPaint paint = SkPaint()
+
+        paint.setStyle(SkPaintStyle.kStroke_Style)
+        paint.setStrokeWidth(width)
+        paint.setStrokeCap(<SkLineCap>cap)
+        paint.setStrokeJoin(<SkLineJoin>join)
+        paint.setStrokeMiter(miter_limit)
+
+        if dash_array:
+            intervals = _SkScalarArray.create(dash_array)
+            if intervals.count % 2 != 0:
+                raise ValueError("Expected an even number of dash_array entries")
+            paint.setPathEffect(
+                SkDashPathEffect.Make(intervals.data, intervals.count, dash_offset)
+            )
+
+        paint.getFillPath(self.path, &self.path)
 
     cdef list getVerbs(self):
         cdef int i, count
@@ -984,6 +1006,24 @@ cdef class _SkPointArray:
         if not self.data:
             raise MemoryError()
         path.getPoints(self.data, self.count)
+        return self
+
+    def __dealloc__(self):
+        PyMem_Free(self.data)  # no-op if data is NULL
+
+
+cdef class _SkScalarArray:
+
+    @staticmethod
+    cdef _SkScalarArray create(object values):
+        # 'values' must be a sequence (e.g. list or tuple) of floats
+        cdef _SkScalarArray self = _SkScalarArray.__new__(_SkScalarArray)
+        self.count = len(values)
+        self.data = <SkScalar *> PyMem_Malloc(self.count * sizeof(SkScalar))
+        if not self.data:
+            raise MemoryError()
+        for i, v in enumerate(values):
+            self.data[i] = v
         return self
 
     def __dealloc__(self):
