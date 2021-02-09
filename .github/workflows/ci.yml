@@ -20,7 +20,6 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest]
         platform: [x64]
-        build-skia-from-source: [1, 0]
     env:
       REPO_DIR: "."
       PLAT: "x86_64"
@@ -29,7 +28,7 @@ jobs:
       TEST_DEPENDS: "tox"
       MB_PYTHON_VERSION: ${{ matrix.python-version }}
       TRAVIS_PYTHON_VERSION: ${{ matrix.python-version }}
-      BUILD_SKIA_FROM_SOURCE: ${{ matrix.build-skia-from-source }}
+      BUILD_SKIA_FROM_SOURCE: 0
       SKIA_LIBRARY_DIR: "build/download"
 
     steps:
@@ -73,7 +72,7 @@ jobs:
         install_run $PLAT
     - uses: actions/upload-artifact@v2
       with:
-        name: skia_pathops-${{ env.TRAVIS_OS_NAME }}-${{ matrix.python-version }}-${{ matrix.build-skia-from-source }}
+        name: skia_pathops-${{ env.TRAVIS_OS_NAME }}-${{ matrix.python-version }}
         path: wheelhouse/*.whl
 
   deploy:
