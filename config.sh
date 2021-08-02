@@ -19,12 +19,8 @@ function run_tests {
         exit 1
     fi
 
-    # select tox environment based on the current python version
-    # E.g.: '2.7' -> 'py27'
-    TOXENV="py${MB_PYTHON_VERSION//\./}"
-
     # Install pre-compiled wheel and run tests against it
-    tox --installpkg "${wheel}" -e "${TOXENV}"
+    tox --installpkg "${wheel}" -e py
 
     # clean up after us, or else running tox later on outside the docker
     # container can lead to permission errors
