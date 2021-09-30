@@ -7,6 +7,7 @@ from distutils import log
 from distutils.dep_util import newer_group
 from distutils.dir_util import mkpath
 from distutils.file_util import copy_file
+from distutils.util import get_platform
 import pkg_resources
 import struct
 import subprocess
@@ -251,7 +252,8 @@ def build_skia(build_base):
     if inside_sdist:
         build_cmd.append("--no-sync-deps")
 
-    env = os.environ.copy()
+    env = os.environ
+    target_cpu = None
     if sys.platform == "win32":
         from distutils._msvccompiler import _get_vc_env
 
@@ -261,10 +263,16 @@ def build_skia(build_base):
         build_cmd.append("--shared-lib")
 
         # update Visual C++ toolchain environment depending on python architecture
-        arch = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
-        env.update(_get_vc_env(arch))
+        target_cpu = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
+        env = os.environ.copy()
+        env.update(_get_vc_env(target_cpu))
+    elif {"macosx", "universal2"}.issubset(get_platform().split("-")):
+        # if Python was built as a 'universal2' binary, we also try to build
+        # a single library combining both x86_64 and arm64 architectures
+        target_cpu = "universal2"
 
-        build_cmd.extend(["--target-cpu", arch])
+    if target_cpu:
+        build_cmd.extend(["--target-cpu", target_cpu])
 
     subprocess.run(build_cmd, check=True, env=env)
     return build_dir
