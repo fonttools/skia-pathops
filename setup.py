@@ -44,24 +44,19 @@ inside_sdist = os.path.exists("PKG-INFO")
 argv = sys.argv[1:]
 
 # bail out early if we are compiling the cython extension module
-if ({"build",
-     "build_ext",
-     "bdist_wheel",
-     "install",
-     "develop",
-     "test"}.intersection(argv) and not with_cython):
-    sys.exit(
-        "error: the required Cython >= %s was not found" % cython_min_version
-    )
+if {"build", "build_ext", "bdist_wheel", "install", "develop", "test"}.intersection(
+    argv
+) and not with_cython:
+    sys.exit("error: the required Cython >= %s was not found" % cython_min_version)
 
-needs_wheel = {'bdist_wheel'}.intersection(argv)
-wheel = ['wheel'] if needs_wheel else []
+needs_wheel = {"bdist_wheel"}.intersection(argv)
+wheel = ["wheel"] if needs_wheel else []
 
 setuptools_git_ls_files = ["setuptools_git_ls_files"] if os.path.isdir(".git") else []
 
 
 class custom_build_ext(build_ext):
-    """ Custom 'build_ext' command which allows to pass compiler-specific
+    """Custom 'build_ext' command which allows to pass compiler-specific
     'extra_compile_args', 'extra_link_args', 'define_macros' and
     'undef_macros' options.
 
@@ -104,7 +99,8 @@ class custom_build_ext(build_ext):
                     "linetrace": linetrace,
                     "language_level": 3,
                     "embedsignature": True,
-                })
+                },
+            )
 
         build_ext.finalize_options(self)
 
@@ -114,12 +110,13 @@ class custom_build_ext(build_ext):
             raise DistutilsSetupError(
                 "in 'ext_modules' option (extension '%s'), "
                 "'sources' must be present and must be "
-                "a list of source filenames" % ext.name)
+                "a list of source filenames" % ext.name
+            )
         sources = list(sources)
 
         ext_path = self.get_ext_fullpath(ext.name)
         depends = sources + ext.depends
-        if not (self.force or newer_group(depends, ext_path, 'newer')):
+        if not (self.force or newer_group(depends, ext_path, "newer")):
             log.debug("skipping '%s' extension (up-to-date)", ext.name)
             return
         else:
@@ -173,20 +170,23 @@ class custom_build_ext(build_ext):
             macros.append(("CYTHON_TRACE", 1))
 
         # compile the source code to object files.
-        objects = self.compiler.compile(sources,
-                                        output_dir=self.build_temp,
-                                        macros=macros,
-                                        include_dirs=ext.include_dirs,
-                                        debug=self.debug,
-                                        extra_postargs=extra_compile_args,
-                                        depends=ext.depends)
+        objects = self.compiler.compile(
+            sources,
+            output_dir=self.build_temp,
+            macros=macros,
+            include_dirs=ext.include_dirs,
+            debug=self.debug,
+            extra_postargs=extra_compile_args,
+            depends=ext.depends,
+        )
 
         # Now link the object files together into a "shared object"
         if ext.extra_objects:
             objects.extend(ext.extra_objects)
 
         self.compiler.link_shared_object(
-            objects, ext_path,
+            objects,
+            ext_path,
             libraries=self.get_libraries(ext),
             library_dirs=ext.library_dirs,
             runtime_library_dirs=ext.runtime_library_dirs,
@@ -194,7 +194,8 @@ class custom_build_ext(build_ext):
             export_symbols=self.get_export_symbols(ext),
             debug=self.debug,
             build_temp=self.build_temp,
-            target_lang=language)
+            target_lang=language,
+        )
 
     def get_libraries(self, ext):
         """Build all libraries for which a builder function is registered,
@@ -276,18 +277,23 @@ if BUILD_SKIA_FROM_SOURCE:
 pkg_dir = os.path.join("src", "python")
 skia_builder_dir = os.path.join("src", "cpp", "skia-builder")
 skia_dir = os.path.join(skia_builder_dir, "skia")
-skia_src_dir = os.path.join(skia_dir, "src") # allow access to internals
+skia_src_dir = os.path.join(skia_dir, "src")  # allow access to internals
 
 include_dirs = [skia_dir, skia_src_dir]
 
 extra_compile_args = {
-    '': [
-        '-std=c++14',
-    ] + ([
-        # extra flags needed on macOS for C++11
-        "-stdlib=libc++",
-        "-mmacosx-version-min=10.9",
-    ] if platform.system() == "Darwin" else []),
+    "": [
+        "-std=c++14",
+    ]
+    + (
+        [
+            # extra flags needed on macOS for C++11
+            "-stdlib=libc++",
+            "-mmacosx-version-min=10.9",
+        ]
+        if platform.system() == "Darwin"
+        else []
+    ),
     "msvc": [
         "/EHsc",
         "/Zi",
@@ -300,10 +306,10 @@ extensions = [
     Extension(
         "pathops._pathops",
         sources=[
-            os.path.join(pkg_dir, 'pathops', '_pathops.pyx'),
+            os.path.join(pkg_dir, "pathops", "_pathops.pyx"),
         ],
         depends=[
-            os.path.join(skia_dir, 'include', 'pathops', 'SkPathOps.h'),
+            os.path.join(skia_dir, "include", "pathops", "SkPathOps.h"),
         ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
@@ -313,7 +319,7 @@ extensions = [
     ),
 ]
 
-with open('README.md', 'r') as f:
+with open("README.md", "r") as f:
     long_description = f.read()
 
 version_file = os.path.join(pkg_dir, "pathops", "_version.py")
@@ -332,11 +338,10 @@ setup_params = dict(
     packages=find_packages(pkg_dir),
     ext_modules=extensions,
     cmdclass={
-        'build_ext': custom_build_ext,
+        "build_ext": custom_build_ext,
     },
     setup_requires=["setuptools_scm"] + setuptools_git_ls_files + wheel,
-    install_requires=[
-    ],
+    install_requires=[],
     extras_require={
         "testing": [
             "pytest",
