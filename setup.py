@@ -39,6 +39,8 @@ except pkg_resources.ResolutionError:
 else:
     with_cython = True
 
+inside_sdist = os.path.exists("PKG-INFO")
+
 argv = sys.argv[1:]
 
 # bail out early if we are compiling the cython extension module
@@ -244,6 +246,9 @@ def build_skia(build_base):
     build_dir = os.path.join(build_base, skia_dir)
     build_skia_py = os.path.join(skia_builder_dir, "build_skia.py")
     build_cmd = [sys.executable, build_skia_py, build_dir]
+
+    if inside_sdist:
+        build_cmd.append("--no-sync-deps")
 
     env = os.environ.copy()
     if sys.platform == "win32":
