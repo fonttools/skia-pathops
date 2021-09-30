@@ -22,12 +22,6 @@ BUILD_SKIA_FROM_SOURCE = bool(int(os.environ.get("BUILD_SKIA_FROM_SOURCE", "1"))
 # Use this to specify the directory where your pre-built skia is located
 SKIA_LIBRARY_DIR = os.environ.get("SKIA_LIBRARY_DIR")
 
-
-# Building libskia with its 'gn' build tool requires python2; if 'python2'
-# executable is not in your $PATH, you can export PYTHON2_EXE=... before
-# running setup.py script.
-PYTHON2_EXE = os.environ.get("PYTHON2_EXE", "python2")
-
 # check if minimum required Cython is available
 cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
 with open("pyproject.toml", "r", encoding="utf-8") as fp:
@@ -249,7 +243,7 @@ def build_skia(build_base):
     log.info("building 'skia' library")
     build_dir = os.path.join(build_base, skia_dir)
     build_skia_py = os.path.join(skia_builder_dir, "build_skia.py")
-    build_cmd = [PYTHON2_EXE, build_skia_py, build_dir]
+    build_cmd = [sys.executable, build_skia_py, build_dir]
 
     env = os.environ.copy()
     if sys.platform == "win32":
