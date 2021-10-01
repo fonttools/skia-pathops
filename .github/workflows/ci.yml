@@ -12,6 +12,7 @@ env:
   CIBW_SKIP: cp36-* pp*-macosx_x86_64 pp*-win_amd64
   CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
   CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+  CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux2014
   CIBW_TEST_EXTRAS: testing
   CIBW_TEST_COMMAND: cd {project} && pytest
   BUILD_SKIA_FROM_SOURCE: 0
