@@ -28,13 +28,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest] #, windows-latest]
+        os: [macos-latest, ubuntu-latest, windows-latest]
         arch: [auto64]
         include:
           - os: macos-latest
             arch: universal2
-          # - os: windows-latest
-          #   arch: auto32
+          - os: windows-latest
+            arch: auto32
     steps:
     - uses: actions/checkout@v2
       with:
