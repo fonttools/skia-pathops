@@ -20,7 +20,7 @@ env:
   CIBW_ENVIRONMENT: BUILD_SKIA_FROM_SOURCE=0 SKIA_LIBRARY_DIR=build/download
 
 jobs:
-  build:
+  build_wheels:
     runs-on: ${{ matrix.os }}
     env:
       CIBW_ARCHS: ${{ matrix.arch }}
@@ -65,11 +65,37 @@ jobs:
         name: skia_pathops-${{ matrix.os }}-${{ matrix.arch }}
         path: wheelhouse/*.whl
 
+  build_aarch64_wheels:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # aarch64 uses qemu so it's slow, build each py version in parallel jobs
+        python: [37, 38, 39, 310]
+        arch: [aarch64]
+    env:
+      CIBW_BUILD: cp${{ matrix.python }}-*
+      CIBW_ARCHS: ${{ matrix.arch }}
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - uses: docker/setup-qemu-action@v1.2.0
+      with:
+        platforms: all
+    - name: Install dependencies
+      run: pip install cibuildwheel
+    - name: Build and Test Wheels
+      run: python -m cibuildwheel --output-dir wheelhouse
+    - uses: actions/upload-artifact@v2
+      with:
+        name: skia_pathops-${{ matrix.python }}-linux-${{ matrix.arch }}
+        path: wheelhouse/*.whl
+
   deploy:
     # only run if the commit is tagged...
     if: startsWith(github.ref, 'refs/tags/v')
     # ... and all build jobs completed successfully
-    needs: [build]
+    needs: [build_wheels, build_aarch64_wheels]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
