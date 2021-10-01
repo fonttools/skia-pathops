@@ -6,6 +6,7 @@ import os
 import shutil
 import struct
 import tempfile
+from distutils.util import get_platform
 
 __requires__ = ["github_release"]
 
@@ -15,8 +16,18 @@ import github_release
 GITHUB_REPO = "fonttools/skia-builder"
 ASSET_TEMPLATE = "libskia-{plat}-{arch}.zip"
 DOWNLOAD_DIR = os.path.join("build", "download")
-CPU_ARCH = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
+
 PLATFORM_TAGS = {"Linux": "linux", "Darwin": "mac", "Windows": "win"}
+CURRENT_PLATFORM = PLATFORM_TAGS.get(platform.system())
+SUPPORTED_CPU_ARCHS = {
+    "linux": {"x64"},
+    "mac": {"x64", "arm64", "universal2"},
+    "win": {"x64", "x86"},
+}
+machine = get_platform().split("-")[-1]
+CURRENT_CPU_ARCH = {"win32": "x86", "amd64": "x64", "x86_64": "x64"}.get(
+    machine, machine
+)
 
 
 logger = logging.getLogger()
@@ -57,16 +68,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p",
         "--platform",
-        default=PLATFORM_TAGS.get(platform.system(), "win"),
+        default=CURRENT_PLATFORM,
         choices=["win", "mac", "linux"],
         help="The desired platform (default: %(default)s)",
     )
     parser.add_argument(
         "-a",
         "--cpu-arch",
-        default=CPU_ARCH,
+        default=CURRENT_CPU_ARCH,
         help="The desired CPU architecture (default: %(default)s)",
-        choices=["x86", "x64"],
+        choices=["x86", "x64", "arm64", "universal2"],
     )
     parser.add_argument(
         "-d",
@@ -78,6 +89,11 @@ if __name__ == "__main__":
         "-t", "--tag-name", default=None, help="release tag name (default: latest)"
     )
     args = parser.parse_args()
+
+    if args.platform is None:
+        parser.error(f"Unsupported platform: {platform.system()}")
+    if args.cpu_arch not in SUPPORTED_CPU_ARCHS[args.platform]:
+        parser.error(f"Unsupported architecture for {args.platform}: {args.cpu_arch}")
 
     tag_name = args.tag_name
     if tag_name is None:
