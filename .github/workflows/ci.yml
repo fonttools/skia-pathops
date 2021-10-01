@@ -14,7 +14,7 @@ env:
   CIBW_MANYLINUX_I686_IMAGE: manylinux2014
   CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux2014
   CIBW_TEST_EXTRAS: testing
-  CIBW_TEST_COMMAND: cd {project} && pytest
+  CIBW_TEST_COMMAND: pytest {project}/tests
   BUILD_SKIA_FROM_SOURCE: 0
   SKIA_LIBRARY_DIR: "build/download"
   CIBW_ENVIRONMENT: BUILD_SKIA_FROM_SOURCE=0 SKIA_LIBRARY_DIR=build/download
