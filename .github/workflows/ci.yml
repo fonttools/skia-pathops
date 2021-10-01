@@ -22,6 +22,8 @@ env:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      CIBW_ARCHS: ${{ matrix.arch }}
     defaults:
       run:
         shell: bash
@@ -34,7 +36,7 @@ jobs:
           - os: macos-latest
             arch: universal2
           - os: windows-latest
-            arch: auto32
+            arch: x86
     steps:
     - uses: actions/checkout@v2
       with:
@@ -46,12 +48,11 @@ jobs:
     - name: Download pre-compiled libskia
       env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          CIBW_ARCHS: ${{ matrix.arch }}
       run: |
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
           pip install githubrelease
-          if [ "$CIBW_ARCHS" == "universal2" ]; then
-            cpu_arch="--cpu-arch=universal2"
+          if ! [[ $CIBW_ARCHS =~ ^auto ]]; then
+            cpu_arch="--cpu-arch=$CIBW_ARCHS"
           fi
           python ci/download_libskia.py -d "${SKIA_LIBRARY_DIR}" $cpu_arch
         fi
@@ -59,8 +60,6 @@ jobs:
       run: pip install cibuildwheel
     - name: Build and Test Wheels
       run: python -m cibuildwheel --output-dir wheelhouse
-      env:
-        CIBW_ARCHS: ${{ matrix.arch }}
     - uses: actions/upload-artifact@v2
       with:
         name: skia_pathops-${{ matrix.os }}-${{ matrix.arch }}
