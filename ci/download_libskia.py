@@ -20,14 +20,17 @@ DOWNLOAD_DIR = os.path.join("build", "download")
 PLATFORM_TAGS = {"Linux": "linux", "Darwin": "mac", "Windows": "win"}
 CURRENT_PLATFORM = PLATFORM_TAGS.get(platform.system())
 SUPPORTED_CPU_ARCHS = {
-    "linux": {"x64"},
+    "linux": {"x64", "arm64"},
     "mac": {"x64", "arm64", "universal2"},
     "win": {"x64", "x86"},
 }
 machine = get_platform().split("-")[-1]
-CURRENT_CPU_ARCH = {"win32": "x86", "amd64": "x64", "x86_64": "x64"}.get(
-    machine, machine
-)
+CURRENT_CPU_ARCH = {
+    "win32": "x86",
+    "amd64": "x64",
+    "x86_64": "x64",
+    "aarch64": "arm64",
+}.get(machine, machine)
 
 
 logger = logging.getLogger()
