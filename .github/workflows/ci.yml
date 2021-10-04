@@ -82,6 +82,14 @@ jobs:
     - uses: docker/setup-qemu-action@v1.2.0
       with:
         platforms: all
+    - name: Download pre-compiled libskia
+      env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
+        if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
+          pip install githubrelease
+          python ci/download_libskia.py -d "${SKIA_LIBRARY_DIR}" --cpu-arch "arm64"
+        fi
     - name: Install dependencies
       run: pip install cibuildwheel
     - name: Build and Test Wheels
