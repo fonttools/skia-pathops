@@ -119,6 +119,23 @@ class PathTest(object):
             # ('lineTo', ((100.0, 100.0),)),
             ('closePath', ())]
 
+    @staticmethod
+    def round(path, ndigits):
+        for verb, pts in path:
+            yield verb, tuple(
+                (round(pt[0], ndigits), round(pt[1], ndigits))
+                for pt in pts
+            )
+
+    @classmethod
+    def assert_paths_almost_equal(cls, actual, expected, ndigits):
+        assert actual.fillType == expected.fillType
+        actual_coords = tuple(cls.round(actual, ndigits))
+        expected_coords = tuple(cls.round(expected, ndigits))
+        print(actual_coords)
+        print(expected_coords)
+        assert actual_coords == expected_coords
+
     def test_transform(self):
         path = Path()
         path.moveTo(125, 376)
@@ -154,8 +171,9 @@ class PathTest(object):
         )
         expected.close()
 
-        result.dump(as_hex=True)
-        assert result == expected
+        # rounding to 4 decimal digit precision, or else for some reasons
+        # the test fails on linux-aarch64
+        self.assert_paths_almost_equal(result, expected, ndigits=4)
 
     def test_pen_addComponent_missing_required_glyphSet(self):
         path = Path()
