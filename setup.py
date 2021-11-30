@@ -16,6 +16,8 @@ import os
 import platform
 from io import open
 import re
+import argparse
+import shlex
 
 
 # export BUILD_SKIA_FROM_SOURCE=0 to not build libskia when building extension
@@ -278,6 +280,36 @@ def build_skia(build_base):
     return build_dir
 
 
+def get_skia_using_pkgconfig():
+    """Runs `pkg-config --libs --cflags skia` and parses returned
+    flags using argparse.
+    """
+    _parser = argparse.ArgumentParser()
+    _parser.add_argument("-I", dest="include_dirs", action="append", default=[])
+    _parser.add_argument("-L", dest="library_dirs", action="append", default=[])
+    _parser.add_argument("-l", dest="libraries", action="append", default=[])
+
+    if BUILD_SKIA_FROM_SOURCE:
+        return _parser.parse_known_args([])[0]
+
+    pkgconfig = os.environ.get("PKG_CONFIG", "pkg-config")
+    log.info("Finding skia using pkg-config")
+    try:
+        op = subprocess.run(
+            [pkgconfig, "--cflags", "--libs", "skia"],
+            text=True,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stout = op.stdout
+    except FileNotFoundError:
+        stout = ""
+    args, _ = _parser.parse_known_args(shlex.split(stout))
+    return args
+
+
+pkg_config_op = get_skia_using_pkgconfig()
 if BUILD_SKIA_FROM_SOURCE:
     custom_build_ext.register_library_builder("skia", build_skia)
 
@@ -287,7 +319,7 @@ skia_builder_dir = os.path.join("src", "cpp", "skia-builder")
 skia_dir = os.path.join(skia_builder_dir, "skia")
 skia_src_dir = os.path.join(skia_dir, "src")  # allow access to internals
 
-include_dirs = [skia_dir, skia_src_dir]
+include_dirs = [skia_dir, skia_src_dir, *pkg_config_op.include_dirs]
 
 extra_compile_args = {
     "": [
@@ -309,6 +341,7 @@ extra_compile_args = {
 }
 
 library_dirs = [SKIA_LIBRARY_DIR] if SKIA_LIBRARY_DIR is not None else []
+library_dirs += pkg_config_op.library_dirs
 
 extensions = [
     Extension(
@@ -316,12 +349,9 @@ extensions = [
         sources=[
             os.path.join(pkg_dir, "pathops", "_pathops.pyx"),
         ],
-        depends=[
-            os.path.join(skia_dir, "include", "pathops", "SkPathOps.h"),
-        ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
-        libraries=["skia"],
+        libraries=["skia", *pkg_config_op.libraries],
         library_dirs=library_dirs,
         language="c++",
     ),
