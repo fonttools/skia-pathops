@@ -120,21 +120,24 @@ class PathTest(object):
             ('closePath', ())]
 
     @staticmethod
-    def round(path, ndigits):
-        for verb, pts in path:
-            yield verb, tuple(
-                (round(pt[0], ndigits), round(pt[1], ndigits))
-                for pt in pts
-            )
+    def path_difference(path1, path2):
+        for (v1, pts1), (v2, pts2) in zip(path1, path2, strict=True):
+            yield v1, v2, tuple(
+                    (pt1[0] - pt2[0], pt1[1] - pt2[1])
+                    for (pt1, pt2) in zip(pts1, pts2, strict=True)
+                )
 
     @classmethod
     def assert_paths_almost_equal(cls, actual, expected, ndigits):
+        from math import fabs, pow
         assert actual.fillType == expected.fillType
-        actual_coords = tuple(cls.round(actual, ndigits))
-        expected_coords = tuple(cls.round(expected, ndigits))
-        print(actual_coords)
-        print(expected_coords)
-        assert actual_coords == expected_coords
+        pd = cls.path_difference(actual, expected)
+        print(pd)
+        for (av, ev, deltas) in pd:
+            assert av == ev
+            for delta in deltas:
+                # Take the max of positive values, include 10^-ndigits in case both deltas are so close to zero it causes log10 to 
+                assert max(fabs(delta[0]), fabs(delta[1])) <= pow(10, -ndigits)
 
     def test_transform(self):
         path = Path()
