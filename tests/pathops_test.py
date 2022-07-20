@@ -121,10 +121,12 @@ class PathTest(object):
 
     @staticmethod
     def path_difference(path1, path2):
-        for (v1, pts1), (v2, pts2) in zip(path1, path2, strict=True):
+        assert len(path1) == len(path2)
+        for (v1, pts1), (v2, pts2) in zip(path1, path2):
+            assert len(pts1) == len(pts2)
             yield v1, v2, tuple(
                     (pt1[0] - pt2[0], pt1[1] - pt2[1])
-                    for (pt1, pt2) in zip(pts1, pts2, strict=True)
+                    for (pt1, pt2) in zip(pts1, pts2)
                 )
 
     @classmethod
