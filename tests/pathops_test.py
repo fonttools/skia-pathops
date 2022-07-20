@@ -136,7 +136,6 @@ class PathTest(object):
         for (av, ev, deltas) in pd:
             assert av == ev
             for delta in deltas:
-                # Take the max of positive values, include 10^-ndigits in case both deltas are so close to zero it causes log10 to 
                 assert max(fabs(delta[0]), fabs(delta[1])) <= pow(10, -ndigits)
 
     def test_transform(self):
