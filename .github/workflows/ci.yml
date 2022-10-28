@@ -70,7 +70,7 @@ jobs:
     strategy:
       matrix:
         # aarch64 uses qemu so it's slow, build each py version in parallel jobs
-        python: [37, 38, 39, 310]
+        python: [37, 38, 39, 310, 311]
         arch: [aarch64]
     env:
       CIBW_BUILD: cp${{ matrix.python }}-*
