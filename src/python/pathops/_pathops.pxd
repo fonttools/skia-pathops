@@ -99,6 +99,8 @@ cdef class Path:
 
     cdef SkPath path
 
+    cdef set originalOnCurvePoints
+
     @staticmethod
     cdef Path create(const SkPath& path)
 
@@ -224,6 +226,7 @@ cdef class RawPathIterator:
 
 cdef class SegmentPenIterator:
 
+    cdef set originalOnCurvePoints
     cdef _SkPointArray pa
     cdef SkPoint *pts
     cdef _VerbArray va

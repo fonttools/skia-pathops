@@ -106,6 +106,30 @@ class PathTest(object):
             ('qCurveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
             ('closePath', ())]
 
+    def test_decompose_join_quadratic_segments_preserve_original_oncurves(self):
+        path = Path()
+        pen = path.getPen()
+        pen.moveTo((0, 0))
+        pen.qCurveTo((1, 1), (1.5, 1.5)) # This time the on-curve is explicit
+        pen.qCurveTo((2, 2), (3, 3))
+        pen.closePath()
+
+        items = list(path)
+        assert len(items) == 4
+        # the TrueType quadratic spline with N off-curves is stored internally
+        # as N atomic quadratic Bezier segments
+        assert items[1][0] == PathVerb.QUAD
+        assert items[1][1] == ((1.0, 1.0), (1.5, 1.5))
+        assert items[2][0] == PathVerb.QUAD
+        assert items[2][1] == ((2.0, 2.0), (3.0, 3.0))
+
+        # when drawn back onto a SegmentPen, the implicit on-curves are omitted
+        assert list(path.segments) == [
+            ('moveTo', ((0.0, 0.0),)),
+            ('qCurveTo', ((1.0, 1.0), (1.5, 1.5))),
+            ('qCurveTo', ((2.0, 2.0), (3.0, 3.0))),
+            ('closePath', ())]
+
     def test_last_implicit_lineTo(self):
         # https://github.com/fonttools/skia-pathops/issues/6
         path = Path()

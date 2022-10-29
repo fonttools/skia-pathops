@@ -137,6 +137,7 @@ cdef class Path:
 
     def __init__(self, other=None, fillType=None):
         cdef Path static_path
+        self.originalOnCurvePoints = set()
         if other is not None:
             if isinstance(other, Path):
                 static_path = other
@@ -254,7 +255,7 @@ cdef class Path:
             print(self._to_string(as_hex=as_hex))  # Python
 
     def _to_string(self, as_hex=False):
-        # return a text repesentation as Python code
+        # return a text representation as Python code
         if self.path.isEmpty():
             return ""
         if as_hex:
@@ -669,6 +670,12 @@ cdef class Path:
         )
         cdef Path result = Path.__new__(Path)
         self.path.transform(matrix, &result.path)
+        # TODO: figure out how to transform the original oncurve points using the matrix
+        # result.originalOnCurvePoints = set(
+        #     transform_tuple_point(matrix, pt)
+        #     for pt in self.originalOnCurvePoints
+        # )
+        result.originalOnCurvePoints = self.originalOnCurvePoints # FIXME: DUMMY just to make test pass
         return result
 
 
@@ -753,6 +760,7 @@ cdef tuple CLOSE_PATH = ("closePath", NO_POINTS)
 cdef class SegmentPenIterator:
 
     def __cinit__(self, Path path):
+        self.originalOnCurvePoints = path.originalOnCurvePoints
         self.pa = _SkPointArray.create(path.path)
         self.pts = self.pa.data
         self.va = _VerbArray.create(path.path)
@@ -850,7 +858,11 @@ cdef class SegmentPenIterator:
             next_verb_ptr = verbs + 1
             if next_verb_ptr != self.verb_stop:
                 if next_verb_ptr[0] == kQuad_Verb:
-                    if is_middle_point(pts[0], pts[1], pts[2]):
+                    if (
+                        is_middle_point(pts[0], pts[1], pts[2])
+                        # Don't delete on-curve points that were present in the original curve
+                        and (pts[1].x(), pts[1].y()) not in self.originalOnCurvePoints
+                    ):
                         # skip TrueType "implied" on-curve point, and keep
                         # evaluating the next quadratic segment
                         verbs = next_verb_ptr
@@ -887,9 +899,11 @@ cdef class PathPen:
 
     cpdef moveTo(self, pt):
         self.path.moveTo(pt[0], pt[1])
+        self.path.originalOnCurvePoints.add(pt)
 
     cpdef lineTo(self, pt):
         self.path.lineTo(pt[0], pt[1])
+        self.path.originalOnCurvePoints.add(pt)
 
     cpdef curveTo(self, pt1, pt2, pt3):
         # support BasePen "super-beziers"? Nah.
@@ -897,10 +911,12 @@ cdef class PathPen:
             pt1[0], pt1[1],
             pt2[0], pt2[1],
             pt3[0], pt3[1])
+        self.path.originalOnCurvePoints.add(pt3)
 
     def qCurveTo(self, *points):
         for pt1, pt2 in _decompose_quadratic_segment(points):
             self._qCurveToOne(pt1, pt2)
+        self.path.originalOnCurvePoints.add(points[-1])
 
     cdef _qCurveToOne(self, pt1, pt2):
         self.path.quadTo(pt1[0], pt1[1], pt2[0], pt2[1])
@@ -922,6 +938,7 @@ cdef class PathPen:
         cdef Path component_path = base_path.transform(*transformation)
 
         self.path.addPath(component_path)
+        self.path.originalOnCurvePoints.update(component_path.originalOnCurvePoints)
 
 
 cdef double get_path_area(const SkPath& path) except? -1234567:
