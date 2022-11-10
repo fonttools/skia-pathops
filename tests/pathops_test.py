@@ -175,9 +175,9 @@ class PathTest(object):
         )
         expected.close()
 
-        # rounding to 4 decimal digit precision, or else for some reasons
-        # the test fails on linux-aarch64
-        self.assert_paths_almost_equal(result, expected, ndigits=4)
+        # rounding to 3 decimal digit precision, or else for some reasons
+        # the test fails on >4 digits on linux-aarch64 and >3 digits on AVX platforms
+        self.assert_paths_almost_equal(result, expected, ndigits=3)
 
     def test_pen_addComponent_missing_required_glyphSet(self):
         path = Path()
