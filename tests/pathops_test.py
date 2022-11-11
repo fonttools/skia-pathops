@@ -11,6 +11,7 @@ from pathops import (
     ArcSize,
     Direction,
     simplify,
+    NumberOfPointsError,
 )
 
 import pytest
@@ -105,6 +106,56 @@ class PathTest(object):
             ('moveTo', ((0.0, 0.0),)),
             ('qCurveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
             ('closePath', ())]
+
+    def test_qCurveTo_varargs(self):
+        path = Path()
+        pen = path.getPen()
+        pen.moveTo((0, 0))
+        pen.qCurveTo((1, 1))
+        pen.closePath()
+
+        items = list(path)
+        assert len(items) == 3
+        # qcurve without offcurves is stored internally as a line
+        assert items[1][0] == PathVerb.LINE
+        assert items[1][1] == ((1.0, 1.0),)
+
+        assert list(path.segments) == [
+            ('moveTo', ((0.0, 0.0),)),
+            ('lineTo', ((1.0, 1.0),)),
+            ('closePath', ()),
+        ]
+
+        with pytest.raises(
+            NumberOfPointsError, match="qCurveTo requires at least 1 point; got 0"
+        ):
+            pen.qCurveTo()
+
+    def test_curveTo_varargs(self):
+        path = Path()
+        pen = path.getPen()
+        pen.moveTo((0, 0))
+        pen.curveTo((1, 1), (2, 2), (3, 3))  # a cubic
+        pen.curveTo((4, 4), (5, 5))  # a quadratic
+        pen.curveTo((6, 6))  # a line
+        pen.closePath()
+
+        assert list(path.segments) == [
+            ('moveTo', ((0.0, 0.0),)),
+            ('curveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
+            ('qCurveTo', ((4.0, 4.0), (5.0, 5.0))),
+            ('lineTo', ((6.0, 6.0),)),
+            ('closePath', ()),
+        ]
+
+        with pytest.raises(
+            NumberOfPointsError, match="curveTo requires between 1 and 3 points; got 0"
+        ):
+            pen.curveTo()
+        with pytest.raises(
+            NumberOfPointsError, match="curveTo requires between 1 and 3 points; got 4"
+        ):
+            pen.curveTo((0, 0), (1, 1), (2, 2), (3, 3))
 
     def test_last_implicit_lineTo(self):
         # https://github.com/fonttools/skia-pathops/issues/6

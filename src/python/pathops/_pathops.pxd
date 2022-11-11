@@ -247,7 +247,7 @@ cdef class PathPen:
 
     cpdef lineTo(self, pt)
 
-    cpdef curveTo(self, pt1, pt2, pt3)
+    # def curveTo(self, *points)
 
     # def qCurveTo(self, *points)
 

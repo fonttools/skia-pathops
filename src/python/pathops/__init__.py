@@ -14,6 +14,7 @@ from ._pathops import (
     PathOpsError,
     UnsupportedVerbError,
     OpenPathError,
+    NumberOfPointsError,
     bits2float,
     float2bits,
     decompose_quadratic_segment,
