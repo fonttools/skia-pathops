@@ -54,6 +54,10 @@ cdef class OpenPathError(PathOpsError):
     pass
 
 
+cdef class NumberOfPointsError(PathOpsError):
+    pass
+
+
 # Helpers to convert to/from a float and its bit pattern
 
 cdef inline int32_t _float2bits(float x):
@@ -891,16 +895,35 @@ cdef class PathPen:
     cpdef lineTo(self, pt):
         self.path.lineTo(pt[0], pt[1])
 
-    cpdef curveTo(self, pt1, pt2, pt3):
-        # support BasePen "super-beziers"? Nah.
-        self.path.cubicTo(
-            pt1[0], pt1[1],
-            pt2[0], pt2[1],
-            pt3[0], pt3[1])
+    def curveTo(self, *points):
+        num_offcurves = len(points) - 1
+        if num_offcurves == 2:
+            pt1, pt2, pt3 = points
+            self.path.cubicTo(
+                pt1[0], pt1[1],
+                pt2[0], pt2[1],
+                pt3[0], pt3[1])
+        elif num_offcurves == 1:
+            pt1, pt2 = points
+            self.path.quadTo(pt1[0], pt1[1], pt2[0], pt2[1])
+        elif num_offcurves == 0:
+            pt = points[0]
+            self.path.lineTo(pt[0], pt[1])
+        else:
+            # support BasePen "super-beziers"? Nah.
+            raise NumberOfPointsError(
+                "curveTo requires between 1 and 3 points; got %d" % len(points)
+            )
 
     def qCurveTo(self, *points):
-        for pt1, pt2 in _decompose_quadratic_segment(points):
-            self._qCurveToOne(pt1, pt2)
+        num_offcurves = len(points) - 1
+        if num_offcurves > 0:
+            for pt1, pt2 in _decompose_quadratic_segment(points):
+                self._qCurveToOne(pt1, pt2)
+        elif num_offcurves == 0:
+            self.lineTo(points[0])
+        else:
+            raise NumberOfPointsError("qCurveTo requires at least 1 point; got 0")
 
     cdef _qCurveToOne(self, pt1, pt2):
         self.path.quadTo(pt1[0], pt1[1], pt2[0], pt2[1])
