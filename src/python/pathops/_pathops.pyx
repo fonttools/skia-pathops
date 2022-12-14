@@ -21,6 +21,7 @@ from ._skia.core cimport (
     sk_sp,
     SkPathEffect,
     SkDashPathEffect,
+    FillPathWithPaint,
 )
 from ._skia.pathops cimport (
     Op,
@@ -479,7 +480,7 @@ cdef class Path:
                 SkDashPathEffect.Make(intervals.data, intervals.count, dash_offset)
             )
 
-        paint.getFillPath(self.path, &self.path)
+        FillPathWithPaint(self.path, paint, &self.path)
 
     cdef list getVerbs(self):
         cdef int i, count
