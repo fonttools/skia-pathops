@@ -323,7 +323,7 @@ include_dirs = [skia_dir, skia_src_dir, *pkg_config_op.include_dirs]
 
 extra_compile_args = {
     "": [
-        "-std=c++14",
+        "-std=c++17",
     ]
     + (
         [
@@ -337,6 +337,7 @@ extra_compile_args = {
     "msvc": [
         "/EHsc",
         "/Zi",
+        "/std:c++17",
     ],
 }
 
