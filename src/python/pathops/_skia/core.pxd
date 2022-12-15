@@ -229,3 +229,6 @@ cdef extern from "include/core/SkPaint.h":
         void setStrokeMiter(SkScalar miter)
         void setPathEffect(sk_sp[SkPathEffect] pathEffect)
         bint getFillPath(const SkPath& src, SkPath* dst) const
+
+cdef extern from "include/core/SkPathUtils.h" namespace "skpathutils":
+    cdef bint FillPathWithPaint(const SkPath& src, const SkPaint& paint, SkPath* dst)
