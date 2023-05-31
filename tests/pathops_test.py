@@ -53,11 +53,19 @@ class PathTest(object):
         pen.curveTo((3.5, 4), (5, 6), (7, 8))
         pen.qCurveTo((9, 10), (11, 12))
         pen.closePath()
+        pen.qCurveTo((1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0), (1.0, -1.0), None)
+        pen.closePath()  # always closed for oncurve-less contour
 
         path2 = Path()
         path.draw(path2.getPen())
 
         assert path == path2
+        assert list(path.segments) == list(path2.segments)
+
+        assert list(path.segments)[-2:] == [
+            ('qCurveTo', ((1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0), (1.0, -1.0), None)),
+            ('closePath', ())
+        ]
 
     def test_allow_open_contour(self):
         path = Path()
@@ -106,6 +114,37 @@ class PathTest(object):
             ('moveTo', ((0.0, 0.0),)),
             ('qCurveTo', ((1.0, 1.0), (2.0, 2.0), (3.0, 3.0))),
             ('closePath', ())]
+
+    def test_decompose_join_oncurveless_quadratic_segments(self):
+        # when qCurveTo ends with None this is interpreted in FontTools pen protocol as
+        # a special TrueType closed contour comprising a single quadratic B-spline in
+        # which all the on-curve points are omitted and implied.
+        # https://github.com/fonttools/skia-pathops/issues/45
+        path = Path()
+        pen = path.getPen()
+        pen.qCurveTo((1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0), (1.0, -1.0), None)
+        # pen.closePath()  # closed always implied in this case, so this call is no-op
+
+        items = list(path)
+        assert len(items) == 6
+        # the TrueType quadratic spline with N off-curves is stored internally
+        # as N atomic quadratic Bezier segments with explicit on-curve points.
+        # A move on-curve point is also added between the last and first off-curves.
+        assert items == [
+            (PathVerb.MOVE, ((1.0, 0.0),)),
+            (PathVerb.QUAD, ((1.0, 1.0), (0.0, 1.0))),
+            (PathVerb.QUAD, ((-1.0, 1.0), (-1.0, 0.0))),
+            (PathVerb.QUAD, ((-1.0, -1.0), (0.0, -1.0))),
+            (PathVerb.QUAD, ((1.0, -1.0), (1.0, 0.0))),
+            (PathVerb.CLOSE, ()),
+        ]
+
+        # when drawn back onto a SegmentPen, implicit on-curves are omitted including
+        # the last/move point
+        assert list(path.segments) == [
+            ('qCurveTo', ((1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0), (1.0, -1.0), None)),
+            ('closePath', ()),
+        ]
 
     def test_qCurveTo_varargs(self):
         path = Path()
