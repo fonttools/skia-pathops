@@ -138,6 +138,17 @@ def _format_hex_coords(floats):
     ) + "\n"
 
 
+def triplewise(iterable):
+    """Return overlapping triplets from an iterable
+
+    E.g. triplewise('ABCDEFG') --> ABC BCD CDE DEF EFG
+
+    From: https://docs.python.org/3/library/itertools.html#itertools-recipes
+    """
+    for (a, _), (b, c) in itertools.pairwise(itertools.pairwise(iterable)):
+        yield a, b, c
+
+
 cdef class Path:
 
     def __init__(self, other=None, fillType=None):
@@ -243,9 +254,8 @@ cdef class Path:
     cpdef draw(self, pen):
         cdef str method
         cdef tuple pts
-        cdef SegmentPenIterator iterator = SegmentPenIterator(self)
 
-        for method, pts in iterator:
+        for method, pts in self.segments:
             getattr(pen, method)(*pts)
 
     def dump(self, cpp=False, as_hex=False):
@@ -617,7 +627,37 @@ cdef class Path:
 
     @property
     def segments(self):
-        return SegmentPenIterator(self)
+        # We need to check for TrueType special quadratic closed spline made of
+        # off-curve points only so that we can make the move point implied.
+        # It's easier to do this in here than inside the SegmentPenIterator, as that
+        # yields each segment one by one, whereas we want to sometimes *not* yield a
+        # moveTo in very specific circumstances (i.e. the whole contour is a single
+        # closed quadratic spline where all the on-curve points are midway between
+        # consecutive off-curve points) based on previous and next segments.
+        cdef SkPoint p1, p2, p3
+        result = []
+        it = itertools.chain([None], SegmentPenIterator(self), [None])
+        for previous, current, next_ in triplewise(it):
+            if (
+                previous is not None
+                and previous[0] == "moveTo"
+                and current[0] == "qCurveTo"
+                and next_ is not None
+                and next_[0] == "closePath"
+                and previous[1][0] == current[1][-1]
+            ):
+                qpoints = current[1]
+                last_off, move_pt, first_off = qpoints[-2], qpoints[-1], qpoints[0]
+                p1 = SkPoint.Make(last_off[0], last_off[1])
+                p2 = SkPoint.Make(move_pt[0], move_pt[1])
+                p3 = SkPoint.Make(first_off[0], first_off[1])
+                if is_middle_point(p1, p2, p3):
+                    # drop the moveTo and make the last on-curve None
+                    del result[-1]
+                    result.append((current[0], current[1][:-1] + (None,)))
+                    continue
+            result.append(current)
+        yield from result
 
     cpdef Path transform(
         self,
@@ -919,8 +959,24 @@ cdef class PathPen:
     def qCurveTo(self, *points):
         num_offcurves = len(points) - 1
         if num_offcurves > 0:
+            oncurveless_contour = points[-1] is None
+            if oncurveless_contour:
+                # Special case for TrueType closed contours without on-curve points.
+                # FontTools pens supports this by allowing the last point of qCurveTo
+                # to be None, which is translated as an implied on-curve point between
+                # the last and the first off-curve points:
+                # https://github.com/fonttools/fonttools/blob/02a0636/Lib/fontTools/pens/basePen.py#L332-L344
+                # https://github.com/fonttools/skia-pathops/issues/45
+                x, y = points[-2]
+                nx, ny = points[0]
+                implied_pt = (0.5 * (x + nx), 0.5 * (y + ny))
+                self.moveTo(implied_pt)
+                points = points[:-1] + (implied_pt,)
             for pt1, pt2 in _decompose_quadratic_segment(points):
                 self._qCurveToOne(pt1, pt2)
+            if oncurveless_contour:
+                # oncurve-less contour is closed by definition
+                self.closePath()
         elif num_offcurves == 0:
             self.lineTo(points[0])
         else:
