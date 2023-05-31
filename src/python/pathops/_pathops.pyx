@@ -41,6 +41,23 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
 from libc.string cimport memset
 cimport cython
 import itertools
+import sys
+
+
+if sys.version_info[:2] < (3, 10):
+    from itertools import tee
+
+    def pairwise(iterable):
+        """Return successive overlapping pairs taken from the input iterable.
+
+        Backported from Python 3.10.
+        https://docs.python.org/3/library/itertools.html#itertools.pairwise
+        """
+        a, b = tee(iterable)
+        next(b, None)
+        return zip(a, b)
+else:
+    from itertools import pairwise
 
 
 cdef class PathOpsError(Exception):
@@ -145,7 +162,7 @@ def triplewise(iterable):
 
     From: https://docs.python.org/3/library/itertools.html#itertools-recipes
     """
-    for (a, _), (b, c) in itertools.pairwise(itertools.pairwise(iterable)):
+    for (a, _), (b, c) in pairwise(pairwise(iterable)):
         yield a, b, c
 
 
