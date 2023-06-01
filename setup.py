@@ -391,7 +391,7 @@ setup_params = dict(
             # "pytest-cython",
         ],
     },
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
