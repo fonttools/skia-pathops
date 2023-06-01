@@ -73,6 +73,10 @@ jobs:
         python: [38, 39, 310, 311]
         arch: [aarch64]
     env:
+      # Skip building aarch64 wheels for musllinux until I figure out why I get
+      # ImportError: Error relocating ...: __aarch64_cas8_acq_rel: symbol not found
+      # https://github.com/fonttools/skia-pathops/actions/runs/5143956953/jobs/9259626577#step:6:624
+      CIBW_SKIP: "*-musllinux*"
       CIBW_BUILD: cp${{ matrix.python }}-*
       CIBW_ARCHS: ${{ matrix.arch }}
     steps:
