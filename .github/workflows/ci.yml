@@ -8,8 +8,8 @@ on:
     branches: [master]
 
 env:
-  # skip 3.6 on all platforms; only build pypy3 for linux
-  CIBW_SKIP: cp36-* pp*-macosx_x86_64 pp*-win_amd64
+  # skip 3.7 on all platforms; only build pypy3 for linux
+  CIBW_SKIP: cp37-* pp*-macosx_x86_64 pp*-win_amd64
   CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
   CIBW_MANYLINUX_I686_IMAGE: manylinux2014
   CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux2014
@@ -70,9 +70,13 @@ jobs:
     strategy:
       matrix:
         # aarch64 uses qemu so it's slow, build each py version in parallel jobs
-        python: [37, 38, 39, 310, 311]
+        python: [38, 39, 310, 311]
         arch: [aarch64]
     env:
+      # Skip building aarch64 wheels for musllinux until I figure out why I get
+      # ImportError: Error relocating ...: __aarch64_cas8_acq_rel: symbol not found
+      # https://github.com/fonttools/skia-pathops/actions/runs/5143956953/jobs/9259626577#step:6:624
+      CIBW_SKIP: "*-musllinux*"
       CIBW_BUILD: cp${{ matrix.python }}-*
       CIBW_ARCHS: ${{ matrix.arch }}
     steps:
