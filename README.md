@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/skia-pathops.svg)](https://pypi.org/project/skia-pathops/)
 
 Python bindings for the [Google Skia](https://skia.org) library's [Path
-Ops](https://skia.org/dev/present/pathops) module, performing boolean
+Ops](https://skia.org/docs/dev/present/pathops/) module, performing boolean
 operations on paths (intersection, union, difference, xor).
 
 Install
