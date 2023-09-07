@@ -746,7 +746,7 @@ cdef uint8_t *POINTS_IN_VERB = [
     0   # DONE
 ]
 
-cpdef dict VERB_METHODS = {
+cdef dict VERB_METHODS = {
     kMove_Verb: "moveTo",
     kLine_Verb: "lineTo",
     kQuad_Verb: "quadTo",
@@ -755,7 +755,7 @@ cpdef dict VERB_METHODS = {
     kClose_Verb: "close",
 }
 
-cpdef dict PEN_METHODS = {
+cdef dict PEN_METHODS = {
     kMove_Verb: "moveTo",
     kLine_Verb: "lineTo",
     kQuad_Verb: "qCurveTo",

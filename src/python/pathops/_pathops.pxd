@@ -211,9 +211,9 @@ cpdef enum PathVerb:
 
 cdef uint8_t *POINTS_IN_VERB
 
-cpdef dict VERB_METHODS
+cdef dict VERB_METHODS
 
-cpdef dict PEN_METHODS
+cdef dict PEN_METHODS
 
 
 cdef class RawPathIterator:
