@@ -52,7 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
-          pip install githubrelease
+          pip install setuptools githubrelease
           if ! [[ $CIBW_ARCHS =~ ^auto ]]; then
             cpu_arch="--cpu-arch=$CIBW_ARCHS"
           fi
@@ -93,7 +93,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
-          pip install githubrelease
+          pip install setuptools githubrelease
           python ci/download_libskia.py -d "${SKIA_LIBRARY_DIR}" --cpu-arch "arm64"
         fi
     - name: Install dependencies
