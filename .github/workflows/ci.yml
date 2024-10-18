@@ -30,7 +30,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        # macos-13 runners are still x86_64, macos-14 (latest) are arm64; we want to build
+        # the x86_64 wheel on/for x86_64 macs
+        os: [macos-13, ubuntu-latest, windows-latest]
         arch: [auto64]
         include:
           - os: macos-latest
@@ -38,11 +40,11 @@ jobs:
           - os: windows-latest
             arch: x86
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Set up Python 3.x
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: "3.x"
     - name: Download pre-compiled libskia
@@ -50,7 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
-          pip install githubrelease
+          pip install setuptools githubrelease
           if ! [[ $CIBW_ARCHS =~ ^auto ]]; then
             cpu_arch="--cpu-arch=$CIBW_ARCHS"
           fi
@@ -60,7 +62,7 @@ jobs:
       run: pip install cibuildwheel
     - name: Build and Test Wheels
       run: python -m cibuildwheel --output-dir wheelhouse
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: skia_pathops-${{ matrix.os }}-${{ matrix.arch }}
         path: wheelhouse/*.whl
@@ -70,7 +72,7 @@ jobs:
     strategy:
       matrix:
         # aarch64 uses qemu so it's slow, build each py version in parallel jobs
-        python: [38, 39, 310, 311, 312]
+        python: [38, 39, 310, 311, 312, 313]
         arch: [aarch64]
     env:
       # Skip building aarch64 wheels for musllinux until I figure out why I get
@@ -80,7 +82,7 @@ jobs:
       CIBW_BUILD: cp${{ matrix.python }}-*
       CIBW_ARCHS: ${{ matrix.arch }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - uses: docker/setup-qemu-action@v1.2.0
@@ -91,14 +93,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
-          pip install githubrelease
+          pip install setuptools githubrelease
           python ci/download_libskia.py -d "${SKIA_LIBRARY_DIR}" --cpu-arch "arm64"
         fi
     - name: Install dependencies
       run: pip install cibuildwheel
     - name: Build and Test Wheels
       run: python -m cibuildwheel --output-dir wheelhouse
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: skia_pathops-${{ matrix.python }}-linux-${{ matrix.arch }}
         path: wheelhouse/*.whl
@@ -110,11 +112,11 @@ jobs:
     needs: [build_wheels, build_aarch64_wheels]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: "3.x"
     - name: Install dependencies
@@ -122,9 +124,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install --upgrade setuptools wheel twine
     - name: Download artifacts from build jobs
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         path: wheelhouse/
+        merge-multiple: true
     - name: Move wheels to dist/ directory
       run: |
         ls wheelhouse/*
@@ -156,13 +159,8 @@ jobs:
         fi
     - name: Create GitHub release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        # This token is provided by Actions, you do not need to create your own token
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
         body_path: "${{ runner.temp }}/release_notes.md"
         draft: false
         prerelease: ${{ env.IS_PRERELEASE }}
