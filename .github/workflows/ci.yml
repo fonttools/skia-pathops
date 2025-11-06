@@ -2,10 +2,10 @@ name: Build + Deploy
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     tags: ["v*.*.*"]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 env:
   # skip 3.7 on all platforms; only build pypy3 for linux
