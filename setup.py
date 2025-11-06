@@ -329,7 +329,7 @@ extra_compile_args = {
         [
             # extra flags needed on macOS for C++11
             "-stdlib=libc++",
-            "-mmacosx-version-min=10.9",
+            "-mmacosx-version-min=11.0",
         ]
         if platform.system() == "Darwin"
         else []
