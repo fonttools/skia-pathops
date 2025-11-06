@@ -1,7 +1,7 @@
 from .core cimport SkPath
 from libcpp.optional cimport optional
 
-cdef extern from "third_party/skia/HEAD/include/pathops/SkPathOps.h":
+cdef extern from "include/pathops/SkPathOps.h":
 
     enum SkPathOp:
         kDifference_SkPathOp,            # subtract the op path from the first path
