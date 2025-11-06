@@ -352,6 +352,7 @@ extensions = [
         ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
+        define_macros=[("SK_SUPPORT_UNSPANNED_APIS", "1")],
         libraries=["skia", *pkg_config_op.libraries],
         library_dirs=library_dirs,
         language="c++",
