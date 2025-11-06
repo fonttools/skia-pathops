@@ -271,6 +271,10 @@ cdef class Path:
     cpdef void reset(self):
         self.path.reset()
 
+    cpdef void rewind(self):
+        """Deprecated alias for reset(). Use reset() instead."""
+        self.path.reset()
+
     cpdef draw(self, pen):
         cdef str method
         cdef tuple pts

@@ -147,6 +147,8 @@ cdef class Path:
 
     cpdef void reset(self)
 
+    cpdef void rewind(self)
+
     cpdef draw(self, pen)
 
     cpdef addPath(self, Path path)
