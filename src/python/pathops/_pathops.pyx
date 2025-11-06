@@ -323,6 +323,10 @@ cdef class Path:
         cdef uint32_t fill = int(FillType(value))
         self.path.setFillType(<SkPathFillType>fill)
 
+    @property
+    def isConvex(self):
+        return self.path.snapshot().isConvex()
+
     def contains(self, tuple pt):
         return self.path.contains(SkPoint.Make(pt[0], pt[1]))
 
