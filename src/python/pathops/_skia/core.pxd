@@ -1,9 +1,21 @@
 from libc.stdint cimport uint8_t
+from libcpp.optional cimport optional
 
 
 ctypedef float SkScalar
 
-cdef extern from "include/core/SkPathTypes.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkSpan.h":
+    cdef cppclass SkSpan[T]:
+        SkSpan[T] subspan(size_t offset) const
+        T& operator[](size_t) const
+        bint empty() const
+        size_t size() const
+        T* data() const
+        T* begin() const
+        T* end() const
+
+
+cdef extern from "third_party/skia/HEAD/include/core/SkPathTypes.h":
 
     enum SkPathFillType:
         kWinding "SkPathFillType::kWinding",
@@ -15,8 +27,16 @@ cdef extern from "include/core/SkPathTypes.h":
         kCW "SkPathDirection::kCW"
         kCCW "SkPathDirection::kCCW"
 
+    enum class SkPathVerb(uint8_t):
+        kMove "SkPathVerb::kMove"
+        kLine "SkPathVerb::kLine"
+        kQuad "SkPathVerb::kQuad"
+        kConic "SkPathVerb::kConic"
+        kCubic "SkPathVerb::kCubic"
+        kClose "SkPathVerb::kClose"
 
-cdef extern from "include/core/SkMatrix.h":
+
+cdef extern from "third_party/skia/HEAD/include/core/SkMatrix.h":
     cdef cppclass SkMatrix:
         SkMatrix() except +
 
@@ -34,7 +54,7 @@ cdef extern from "include/core/SkMatrix.h":
         )
 
 
-cdef extern from "include/core/SkPath.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkPoint.h":
 
     cdef cppclass SkPoint:
 
@@ -50,6 +70,9 @@ cdef extern from "include/core/SkPath.h":
 
         bint operator!=(const SkPoint& other)
 
+
+cdef extern from "third_party/skia/HEAD/include/core/SkPath.h":
+
     cdef cppclass SkPath:
 
         SkPath() except +
@@ -59,45 +82,11 @@ cdef extern from "include/core/SkPath.h":
 
         bint operator!=(const SkPath& other)
 
-        void moveTo(SkScalar x, SkScalar y)
-        void moveTo(const SkPoint& p)
-
-        void lineTo(SkScalar x, SkScalar y)
-        void lineTo(const SkPoint& p)
-
-        void cubicTo(
-            SkScalar x1, SkScalar y1,
-            SkScalar x2, SkScalar y2,
-            SkScalar x3, SkScalar y3)
-        void cubicTo(const SkPoint& p1, const SkPoint& p2, const SkPoint& p3)
-
-        void quadTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2)
-        void quadTo(const SkPoint& p1, const SkPoint& p2)
-
-        void conicTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2,
-                     SkScalar w)
-        void conicTo(const SkPoint& p1, const SkPoint& p2, SkScalar w)
-
-        void arcTo(SkScalar rx, SkScalar ry, SkScalar xAxisRotate, ArcSize largeArc,
-                   SkPathDirection sweep, SkScalar x, SkScalar y)
-        void arcTo(SkPoint& r, SkScalar xAxisRotate, ArcSize largeArc,
-                   SkPathDirection sweep, SkPoint& xy)
-
-        void close()
-
         void dump()
 
         void dumpHex()
 
-        void reset()
-
-        void rewind()
-
-        void setFillType(SkPathFillType ft)
         SkPathFillType getFillType()
-
-        # TODO also expose optional AddPathMode enum
-        void addPath(const SkPath& src) except +
 
         bint isConvex()
 
@@ -121,54 +110,97 @@ cdef extern from "include/core/SkPath.h":
 
         bint getLastPt(SkPoint* lastPt)
 
-        cppclass Iter:
-
-            Iter() except +
-            Iter(const SkPath& path, bint forceClose) except +
-
-            Verb next(SkPoint pts[4])
-
-            SkScalar conicWeight()
-
-            bint isCloseLine()
-
-            bint isClosedContour()
-
-        cppclass RawIter:
-
-            RawIter() except +
-            RawIter(const SkPath& path) except +
-
-            Verb next(SkPoint pts[4])
-
-            Verb peek()
-
-            SkScalar conicWeight()
-
-        void transform(const SkMatrix& matrix, SkPath* dst) const
-
 
 cdef extern from * namespace "SkPath":
-
-    enum Verb:
-        kMove_Verb,
-        kLine_Verb,
-        kQuad_Verb,
-        kConic_Verb,
-        kCubic_Verb,
-        kClose_Verb,
-        kDone_Verb
 
     cdef int ConvertConicToQuads(const SkPoint& p0, const SkPoint& p1,
                                  const SkPoint& p2, SkScalar w,
                                  SkPoint pts[], int pow2)
 
-    enum ArcSize:
-        kSmall_ArcSize
-        kLarge_ArcSize
+
+cdef extern from "third_party/skia/HEAD/include/core/SkPathIter.h":
+
+    cdef cppclass SkPathIter:
+
+        cppclass Rec:
+            SkSpan[const SkPoint] fPoints
+            SkPathVerb fVerb
+            float conicWeight() const
+
+        optional[Rec] next()
 
 
-cdef extern from "include/core/SkRect.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkPathBuilder.h":
+
+    cdef cppclass SkPathBuilder:
+
+        SkPathBuilder() except +
+        SkPathBuilder(SkPath& path) except +
+        SkPathBuilder(SkPathBuilder& path) except +
+        SkPathBuilder& operator=(const SkPath&)
+        SkPathBuilder& operator=(const SkPathBuilder&)
+
+        bint operator==(const SkPathBuilder&)
+
+        bint operator!=(const SkPathBuilder&)
+
+        enum class DumpFormat "SkPathBuilder::DumpFormat":
+            kDecimal "SkPathBuilder::DumpFormat::kDecimal",
+            kHex "SkPathBuilder::DumpFormat::kHex"
+        void dump(DumpFormat)
+
+        void moveTo(SkScalar x, SkScalar y)
+        void moveTo(const SkPoint& p)
+
+        void lineTo(SkScalar x, SkScalar y)
+        void lineTo(const SkPoint& p)
+
+        void cubicTo(
+            SkScalar x1, SkScalar y1,
+            SkScalar x2, SkScalar y2,
+            SkScalar x3, SkScalar y3)
+        void cubicTo(const SkPoint& p1, const SkPoint& p2, const SkPoint& p3)
+
+        void quadTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2)
+        void quadTo(const SkPoint& p1, const SkPoint& p2)
+
+        void conicTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2,
+                     SkScalar w)
+        void conicTo(const SkPoint& p1, const SkPoint& p2, SkScalar w)
+
+        void close()
+
+        void transform(const SkMatrix& matrix)
+
+        void reset()
+
+        SkPath detach()
+        SkPath snapshot()
+
+        void setFillType(SkPathFillType ft)
+        SkPathFillType fillType()
+
+        # TODO also expose optional AddPathMode enum
+        void addPath(const SkPath& src) except +
+
+        bint contains(SkPoint)
+
+        optional[SkRect] computeFiniteBounds()
+
+        optional[SkRect] computeTightBounds()
+
+        bint isEmpty() const
+
+        SkSpan[const SkPoint] points() const
+
+        optional[SkPoint] getLastPt() const
+
+        SkSpan[const SkPathVerb] verbs() const
+
+        SkPathIter iter() const
+
+
+cdef extern from "third_party/skia/HEAD/include/core/SkRect.h":
 
     cdef cppclass SkRect:
 
@@ -181,30 +213,30 @@ cdef extern from "include/core/SkRect.h":
         bint Intersects(const SkRect& a, const SkRect& b)
 
 
-cdef extern from "include/core/SkScalar.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkScalar.h":
 
     cdef enum:
         SK_ScalarNearlyZero
 
 
 # 'opaque' types used by SkDashPathEffect::Make and SkPaint::setPathEffect
-cdef extern from "include/core/SkRefCnt.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkRefCnt.h":
     cdef cppclass sk_sp[T]:
         pass
 
 
-cdef extern from "include/core/SkPathEffect.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkPathEffect.h":
     cdef cppclass SkPathEffect:
         pass
 
 
-cdef extern from "include/effects/SkDashPathEffect.h":
+cdef extern from "third_party/skia/HEAD/include/effects/SkDashPathEffect.h":
     cdef cppclass SkDashPathEffect:
         @staticmethod
         sk_sp[SkPathEffect] Make(const SkScalar intervals[], int count, SkScalar phase)
 
 
-cdef extern from "include/core/SkPaint.h":
+cdef extern from "third_party/skia/HEAD/include/core/SkPaint.h":
     enum SkPaintStyle "SkPaint::Style":
         kFill_Style "SkPaint::Style::kFill_Style",
         kStroke_Style "SkPaint::Style::kStroke_Style",
@@ -230,5 +262,5 @@ cdef extern from "include/core/SkPaint.h":
         void setPathEffect(sk_sp[SkPathEffect] pathEffect)
         bint getFillPath(const SkPath& src, SkPath* dst) const
 
-cdef extern from "include/core/SkPathUtils.h" namespace "skpathutils":
-    cdef bint FillPathWithPaint(const SkPath& src, const SkPaint& paint, SkPath* dst)
+cdef extern from "third_party/skia/HEAD/include/core/SkPathUtils.h" namespace "skpathutils":
+    cdef bint FillPathWithPaint(const SkPath& src, const SkPaint& paint, SkPathBuilder* dst)
