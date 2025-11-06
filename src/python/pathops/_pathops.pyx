@@ -542,9 +542,13 @@ cdef class Path:
 
         cdef optional[SkPathIter] iterator = self.path.iter()
         cdef SkPathVerb verb
+        cdef optional[SkPathIter.Rec] rec
 
         cdef int i = 0
-        while rec := iterator.value().next():
+        while True:
+            rec = iterator.value().next()
+            if not rec.has_value():
+                break
             verb = rec.value().fVerb
             if verb == SkPathVerb.kMove:
                 points[i] = rec.value().fPoints[0]
@@ -566,8 +570,12 @@ cdef class Path:
         cdef SkPathVerb verb
         cdef SkSpan[const SkPoint] p
         cdef optional[SkPathIter] iterator = self.path.iter()
+        cdef optional[SkPathIter.Rec] rec
 
-        while rec := iterator.value().next():
+        while True:
+            rec = iterator.value().next()
+            if not rec.has_value():
+                break
             verb = rec.value().fVerb
             p = rec.value().fPoints
             if verb == SkPathVerb.kMove:
@@ -983,9 +991,13 @@ cdef double get_path_area(const SkPathBuilder& path) except? -1234567:
     cdef SkScalar x0, y0, x1, y1, x2, y2, x3, y3
     cdef optional[SkPathIter] iterator = path.iter()
     cdef bint need_close = False
+    cdef optional[SkPathIter.Rec] rec
 
     p0 = start_point = SkPoint.Make(.0, .0)
-    while rec := iterator.value().next():
+    while True:
+        rec = iterator.value().next()
+        if not rec.has_value():
+            break
         verb = rec.value().fVerb
         p = rec.value().fPoints
         if verb == SkPathVerb.kMove:
@@ -1132,7 +1144,11 @@ cdef int path_is_inside(const SkPathBuilder& self, const SkPathBuilder& other) e
         return 0
 
     cdef optional[SkPathIter] iterator = other.iter()
-    while rec := iterator.value().next():
+    cdef optional[SkPathIter.Rec] rec
+    while True:
+        rec = iterator.value().next()
+        if not rec.has_value():
+            break
         verb = rec.value().fVerb
         p = rec.value().fPoints
         if verb == SkPathVerb.kMove:
