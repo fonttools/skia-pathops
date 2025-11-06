@@ -111,6 +111,12 @@ jobs:
     # ... and all build jobs completed successfully
     needs: [build_wheels, build_aarch64_wheels]
     runs-on: ubuntu-latest
+    environment:
+      name: publish-to-pypi
+      url: https://pypi.org/p/skia-pathops
+    permissions:
+      id-token: write # IMPORTANT: mandatory for trusted publishing.
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -158,9 +164,6 @@ jobs:
         draft: false
         prerelease: ${{ env.IS_PRERELEASE }}
     - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
         if [ "$IS_PRERELEASE" == true ]; then
           echo "DEBUG: This is a pre-release"
