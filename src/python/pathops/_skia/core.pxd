@@ -132,6 +132,10 @@ cdef extern from "include/core/SkPathIter.h":
 
 cdef extern from "include/core/SkPathBuilder.h":
 
+    enum SkArcSize "SkPathBuilder::ArcSize":
+        kSmall_ArcSize "SkPathBuilder::kSmall_ArcSize"
+        kLarge_ArcSize "SkPathBuilder::kLarge_ArcSize"
+
     cdef cppclass SkPathBuilder:
 
         SkPathBuilder() except +
@@ -167,6 +171,9 @@ cdef extern from "include/core/SkPathBuilder.h":
         void conicTo(SkScalar x1, SkScalar y1, SkScalar x2, SkScalar y2,
                      SkScalar w)
         void conicTo(const SkPoint& p1, const SkPoint& p2, SkScalar w)
+
+        void arcTo(const SkPoint& r, SkScalar xAxisRotate, SkArcSize largeArc,
+                   SkPathDirection sweep, const SkPoint& xy)
 
         void close()
 

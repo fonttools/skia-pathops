@@ -8,6 +8,8 @@ from pathops import (
     FillType,
     bits2float,
     float2bits,
+    ArcSize,
+    Direction,
     simplify,
     NumberOfPointsError,
 )
@@ -970,6 +972,19 @@ def test_strip_collinear_moveTo():
                 ('qCurveTo', ((14.39, 18.79), (17.50, 26.04), (17.50, 28.96), (14.39, 30.00), (10.0, 30.0))),
                 ('endPath', ())
             ),
+        ),
+        (
+            'arc_to_quads',
+            (
+                ('moveTo', (7, 5)),
+                ('arcTo', (3, 1, 0, ArcSize.SMALL, Direction.CCW, 7, 2)),
+                ('convertConicsToQuads', ()),
+            ),
+            (
+                ('moveTo', ((7.0, 5.0),)),
+                ('qCurveTo', ((11.5, 5.0), (11.5, 2.0), (7.0, 2.0))),
+                ('endPath', ()),
+            )
         )
     ]
 )

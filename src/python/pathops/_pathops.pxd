@@ -1,4 +1,5 @@
 from ._skia.core cimport (
+    SkArcSize,
     SkLineCap,
     SkLineJoin,
     SkPath,
@@ -49,6 +50,12 @@ cpdef enum LineJoin:
     MITER_JOIN = <uint32_t>SkLineJoin.kMiter_Join,
     ROUND_JOIN = <uint32_t>SkLineJoin.kRound_Join,
     BEVEL_JOIN = <uint32_t>SkLineJoin.kBevel_Join
+
+
+cpdef enum ArcSize:
+    SMALL = <uint32_t>SkArcSize.kSmall_ArcSize
+    LARGE = <uint32_t>SkArcSize.kLarge_ArcSize
+
 
 cpdef enum Direction:
     CW = <uint32_t>SkPathDirection.kCW
@@ -123,6 +130,17 @@ cdef class Path:
         SkScalar y2,
         SkScalar x3,
         SkScalar y3,
+    )
+
+    cpdef void arcTo(
+        self,
+        SkScalar rx,
+        SkScalar ry,
+        SkScalar xAxisRotate,
+        ArcSize largeArc,
+        Direction sweep,
+        SkScalar x,
+        SkScalar y,
     )
 
     cpdef void close(self)

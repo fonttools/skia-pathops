@@ -1,4 +1,5 @@
 from ._skia.core cimport (
+    SkArcSize,
     SkPath,
     SkPathBuilder,
     SkPathFillType,
@@ -244,6 +245,25 @@ cdef class Path:
         SkScalar y3,
     ):
         self.path.cubicTo(x1, y1, x2, y2, x3, y3)
+
+    cpdef void arcTo(
+        self,
+        SkScalar rx,
+        SkScalar ry,
+        SkScalar xAxisRotate,
+        ArcSize largeArc,
+        Direction sweep,
+        SkScalar x,
+        SkScalar y,
+    ):
+        self.path.arcTo(
+            SkPoint.Make(rx, ry),
+            xAxisRotate,
+            <SkArcSize>largeArc,
+            <SkPathDirection>sweep,
+            SkPoint.Make(x, y)
+        )
+
 
     cpdef void close(self):
         self.path.close()
