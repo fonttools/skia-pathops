@@ -77,9 +77,10 @@ class PathTest(object):
         pen.curveTo((2, 2), (3, 3), (4, 4))
         pen.endPath()
 
+        # In Skia m143+, consecutive moveTo operations collapse:
+        # the second moveTo overwrites the first, so the single-point
+        # contour at (0, 0) is lost
         assert list(path.segments) == [
-            ('moveTo', ((0.0, 0.0),)),
-            ('endPath', ()),
             ('moveTo', ((1.0, 0.0),)),
             ('lineTo', ((1.0, 1.0),)),
             ('curveTo', ((2.0, 2.0), (3.0, 3.0), (4.0, 4.0))),
@@ -367,23 +368,11 @@ class OpBuilderTest(object):
         builder.add(path2, PathOp.UNION)
         result = builder.resolve()
 
+        # In Skia m143+, the PathOps simplification is more aggressive:
+        # the pathological input (path2 with extreme spike at 773669888 units)
+        # produces degenerate artifacts that are now simplified away,
+        # leaving only the main contour
         assert list(result.segments) == [
-            ("moveTo", ((5316.0, 4590.0),)),
-            ("lineTo", ((5220.0, 4590.0),)),
-            ("lineTo", ((5220.0, 4866.92333984375),)),
-            ("lineTo", ((5316.0, 4590.0),)),
-            ("closePath", ()),
-            ("moveTo", ((5192.18701171875, 4947.15283203125),)),
-            (
-                "curveTo",
-                (
-                    (5171.5654296875, 4973.322265625),
-                    (5160.0, 5005.9443359375),
-                    (5160.0, 5040.00048828125),
-                ),
-            ),
-            ("lineTo", ((5192.18701171875, 4947.15283203125),)),
-            ("closePath", ()),
             ("moveTo", ((5688.0, 7425.0),)),
             ("lineTo", ((-225.0, 7425.0),)),
             ("lineTo", ((5.0, -225.0),)),
@@ -548,9 +537,9 @@ TEST_DATA = [
         [
             (PathVerb.MOVE, ((0, 0),)),
         ],
-        [
-            (PathVerb.MOVE, ((0, 0),)),
-        ],
+        # In Skia m143+, SkPathIter strips trailing moveTo verbs,
+        # so a path with only moveTo becomes empty after reversal
+        [],
     ),
     (
         [
