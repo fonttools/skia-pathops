@@ -26,6 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CIBW_ARCHS: ${{ matrix.arch }}
+      CIBW_BUILD: ${{ matrix.cibw_build_filter || '' }}
     defaults:
       run:
         shell: bash
@@ -35,8 +36,18 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         arch: [auto64]
         include:
+          # CPython universal2 wheels (x86_64 + arm64) for macOS
           - os: macos-latest
             arch: universal2
+            cibw_build_filter: "cp*"
+          # PyPy x86_64 wheels for macOS (PyPy doesn't support universal2)
+          - os: macos-13
+            arch: x86_64
+            cibw_build_filter: "pp*"
+          # PyPy arm64 wheels for macOS (PyPy doesn't support universal2)
+          - os: macos-latest
+            arch: arm64
+            cibw_build_filter: "pp*"
           - os: windows-latest
             arch: x86
     steps:
@@ -54,7 +65,11 @@ jobs:
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
           pip install setuptools githubrelease
           if ! [[ $CIBW_ARCHS =~ ^auto ]]; then
-            cpu_arch="--cpu-arch=$CIBW_ARCHS"
+            # translate cibuildwheel arch names to download_libskia.py names
+            case "$CIBW_ARCHS" in
+              x86_64) cpu_arch="--cpu-arch=x64" ;;
+              *) cpu_arch="--cpu-arch=$CIBW_ARCHS" ;;
+            esac
           fi
           python ci/download_libskia.py -d "${SKIA_LIBRARY_DIR}" $cpu_arch
         fi
