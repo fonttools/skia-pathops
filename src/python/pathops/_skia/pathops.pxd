@@ -1,5 +1,5 @@
 from .core cimport SkPath
-
+from libcpp.optional cimport optional
 
 cdef extern from "include/pathops/SkPathOps.h":
 
@@ -10,11 +10,11 @@ cdef extern from "include/pathops/SkPathOps.h":
         kXOR_SkPathOp,                   # exclusive-or the two paths
         kReverseDifference_SkPathOp      # subtract the first path from the op path
 
-    bint Op(const SkPath& one, const SkPath& two, SkPathOp op, SkPath* result)
+    optional[SkPath] Op(const SkPath& one, const SkPath& two, SkPathOp op)
 
-    bint Simplify(const SkPath& path, SkPath* result)
+    optional[SkPath] Simplify(const SkPath& path)
 
-    bint AsWinding(const SkPath& path, SkPath* result)
+    optional[SkPath] AsWinding(const SkPath& path)
 
     cdef cppclass SkOpBuilder:
 
@@ -22,4 +22,4 @@ cdef extern from "include/pathops/SkPathOps.h":
 
         void add(const SkPath& path, SkPathOp _operator)
 
-        bint resolve(SkPath* result)
+        optional[SkPath] resolve()

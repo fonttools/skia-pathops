@@ -1,19 +1,15 @@
 from ._skia.core cimport (
+    SkArcSize,
     SkLineCap,
     SkLineJoin,
     SkPath,
+    SkPathBuilder,
     SkPathFillType,
+    SkPathIter,
+    SkPathVerb,
     SkPoint,
     SkScalar,
-    kMove_Verb,
-    kLine_Verb,
-    kQuad_Verb,
-    kConic_Verb,
-    kCubic_Verb,
-    kClose_Verb,
-    kDone_Verb,
-    kSmall_ArcSize,
-    kLarge_ArcSize,
+    SkSpan,
     SkPathDirection,
     SkMatrix,
 )
@@ -27,6 +23,7 @@ from ._skia.pathops cimport (
     kReverseDifference_SkPathOp,
 )
 from libc.stdint cimport uint8_t, int32_t, uint32_t
+from libcpp.optional cimport optional
 
 
 cpdef enum PathOp:
@@ -56,8 +53,8 @@ cpdef enum LineJoin:
 
 
 cpdef enum ArcSize:
-    SMALL = kSmall_ArcSize
-    LARGE = kLarge_ArcSize
+    SMALL = <uint32_t>SkArcSize.kSmall_ArcSize
+    LARGE = <uint32_t>SkArcSize.kLarge_ArcSize
 
 
 cpdef enum Direction:
@@ -97,10 +94,10 @@ cdef bint collinear(
 
 cdef class Path:
 
-    cdef SkPath path
+    cdef SkPathBuilder path
 
     @staticmethod
-    cdef Path create(const SkPath& path)
+    cdef Path create(const SkPathBuilder& path)
 
     cpdef PathPen getPen(self, object glyphSet=*, bint allow_open_paths=*)
 
@@ -200,13 +197,12 @@ cdef class Path:
 
 
 cpdef enum PathVerb:
-    MOVE = kMove_Verb
-    LINE = kLine_Verb
-    QUAD = kQuad_Verb
-    CONIC = kConic_Verb  # unsupported
-    CUBIC = kCubic_Verb
-    CLOSE = kClose_Verb
-    DONE = kDone_Verb  # unused; we raise StopIteration instead
+    MOVE = <uint8_t>SkPathVerb.kMove
+    LINE = <uint8_t>SkPathVerb.kLine
+    QUAD = <uint8_t>SkPathVerb.kQuad
+    CONIC = <uint8_t>SkPathVerb.kConic  # unsupported
+    CUBIC = <uint8_t>SkPathVerb.kCubic
+    CLOSE = <uint8_t>SkPathVerb.kClose
 
 
 cdef uint8_t *POINTS_IN_VERB
@@ -219,20 +215,19 @@ cdef dict PEN_METHODS
 cdef class RawPathIterator:
 
     cdef Path path
-    cdef SkPath.RawIter iterator
+    cdef optional[SkPathIter] iterator
 
 
 cdef class SegmentPenIterator:
 
-    cdef _SkPointArray pa
-    cdef SkPoint *pts
-    cdef _VerbArray va
-    cdef uint8_t *verbs
-    cdef uint8_t *verb_stop
+    cdef Path path
+    cdef const SkPoint *pts
+    cdef const SkPathVerb *verbs
+    cdef const SkPathVerb *verb_stop
     cdef SkPoint move_pt
     cdef bint closed
 
-    cdef uint8_t peek(self)
+    cdef bint nextIsClose(self)
 
     cdef tuple _join_quadratic_segments(self)
 
@@ -260,25 +255,7 @@ cdef class PathPen:
     cpdef addComponent(self, glyphName, transformation)
 
 
-cdef double get_path_area(const SkPath& path) except? -1234567
-
-
-cdef class _VerbArray:
-
-    cdef uint8_t *data
-    cdef int count
-
-    @staticmethod
-    cdef _VerbArray create(const SkPath& path)
-
-
-cdef class _SkPointArray:
-
-    cdef SkPoint *data
-    cdef int count
-
-    @staticmethod
-    cdef _SkPointArray create(const SkPath& path)
+cdef double get_path_area(const SkPathBuilder& path) except? -1234567
 
 
 cdef class _SkScalarArray:
@@ -290,13 +267,13 @@ cdef class _SkScalarArray:
     cdef _SkScalarArray create(object values)
 
 
-cdef int pts_in_verb(unsigned v) except -1
+cdef int pts_in_verb(SkPathVerb v) except -1
 
 
-cdef bint reverse_contour(SkPath& path) except False
+cdef bint reverse_contour(SkPathBuilder& path) except False
 
 
-cdef int path_is_inside(const SkPath& self, const SkPath& other) except -1
+cdef int path_is_inside(const SkPathBuilder& self, const SkPathBuilder& other) except -1
 
 
 cpdef int restore_starting_points(Path path, list points) except -1
@@ -313,17 +290,17 @@ cdef int find_oncurve_point(
     SkScalar y,
     const SkPoint *pts,
     int pt_count,
-    const uint8_t *verbs,
+    const SkPathVerb *verbs,
     int verb_count,
     int *pt_index,
     int *verb_index,
 ) except -1
 
 
-cdef int contour_is_closed(const uint8_t *verbs, int verb_count) except -1
+cdef int contour_is_closed(SkSpan[const SkPathVerb] verbs) except -1
 
 
-cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
+cdef int set_contour_start_point(SkPathBuilder& path, SkScalar x, SkScalar y) except -1
 
 
 cdef int compute_conic_to_quad_pow2(

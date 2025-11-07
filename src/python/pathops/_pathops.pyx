@@ -1,19 +1,17 @@
 from ._skia.core cimport (
+    SkArcSize,
     SkPath,
+    SkPathBuilder,
     SkPathFillType,
+    SkPathIter,
+    SkPathVerb,
     SkPoint,
-    SkScalar,
     SkRect,
+    SkScalar,
+    SkSpan,
     SkLineCap,
     SkLineJoin,
     SkPathDirection,
-    kMove_Verb,
-    kLine_Verb,
-    kQuad_Verb,
-    kConic_Verb,
-    kCubic_Verb,
-    kClose_Verb,
-    kDone_Verb,
     SK_ScalarNearlyZero,
     ConvertConicToQuads,
     SkPaint,
@@ -23,6 +21,7 @@ from ._skia.core cimport (
     SkDashPathEffect,
     FillPathWithPaint,
 )
+from libcpp.optional cimport optional
 from ._skia.pathops cimport (
     Op,
     Simplify,
@@ -180,7 +179,7 @@ cdef class Path:
             self.fillType = fillType
 
     @staticmethod
-    cdef Path create(const SkPath& path):
+    cdef Path create(const SkPathBuilder& path):
         cdef Path self = Path.__new__(Path)
         self.path = path
         return self
@@ -257,7 +256,14 @@ cdef class Path:
         SkScalar x,
         SkScalar y,
     ):
-        self.path.arcTo(rx, ry, xAxisRotate, largeArc, <SkPathDirection>sweep, x, y)
+        self.path.arcTo(
+            SkPoint.Make(rx, ry),
+            xAxisRotate,
+            <SkArcSize>largeArc,
+            <SkPathDirection>sweep,
+            SkPoint.Make(x, y)
+        )
+
 
     cpdef void close(self):
         self.path.close()
@@ -266,7 +272,8 @@ cdef class Path:
         self.path.reset()
 
     cpdef void rewind(self):
-        self.path.rewind()
+        """Deprecated alias for reset(). Use reset() instead."""
+        self.path.reset()
 
     cpdef draw(self, pen):
         cdef str method
@@ -279,9 +286,9 @@ cdef class Path:
         # print a text repesentation to stdout
         if cpp:  # C++
             if as_hex:
-                self.path.dumpHex()
+                self.path.dump(SkPathBuilder.DumpFormat.kHex)
             else:
-                self.path.dump()
+                self.path.dump(SkPathBuilder.DumpFormat.kDecimal)
         else:
             print(self._to_string(as_hex=as_hex))  # Python
 
@@ -329,11 +336,11 @@ cdef class Path:
     __hash__ = None  # Path is a mutable object, let's make it unhashable
 
     cpdef addPath(self, Path path):
-        self.path.addPath(path.path)
+        self.path.addPath(path.path.snapshot())
 
     @property
     def fillType(self):
-        return FillType(<uint32_t>self.path.getFillType())
+        return FillType(<uint32_t>self.path.fillType())
 
     @fillType.setter
     def fillType(self, value):
@@ -342,19 +349,25 @@ cdef class Path:
 
     @property
     def isConvex(self):
-        return self.path.isConvex()
+        return self.path.snapshot().isConvex()
 
     def contains(self, tuple pt):
-        return self.path.contains(pt[0], pt[1])
+        return self.path.contains(SkPoint.Make(pt[0], pt[1]))
 
     @property
     def bounds(self):
-        cdef SkRect r = self.path.computeTightBounds()
+        cdef optional[SkRect] bounds = self.path.computeTightBounds()
+        if not bounds.has_value():
+            return None
+        cdef SkRect r = bounds.value()
         return (r.left(), r.top(), r.right(), r.bottom())
 
     @property
     def controlPointBounds(self):
-        cdef SkRect r = self.path.getBounds()
+        cdef optional[SkRect] bounds = self.path.computeFiniteBounds()
+        if not bounds.has_value():
+            return None
+        cdef SkRect r = bounds.value()
         return (r.left(), r.top(), r.right(), r.bottom())
 
     @property
@@ -372,11 +385,11 @@ cdef class Path:
 
     cpdef reverse(self):
         cdef Path contour
-        cdef SkPath skpath
-        skpath.setFillType(self.path.getFillType())
+        cdef SkPathBuilder skpath
+        skpath.setFillType(self.path.fillType())
         for contour in self.contours:
             reverse_contour(contour.path)
-            skpath.addPath(contour.path)
+            skpath.addPath(contour.path.snapshot())
         self.path = skpath
 
     cpdef simplify(
@@ -388,8 +401,10 @@ cdef class Path:
         cdef list first_points
         if keep_starting_points:
             first_points = self.firstPoints
-        if not Simplify(self.path, &self.path):
+        cdef optional[SkPath] simplified = Simplify(self.path.snapshot())
+        if not simplified.has_value():
             raise PathOpsError("simplify operation did not succeed")
+        self.path = simplified.value()
         if fix_winding:
             winding_from_even_odd(self, clockwise)
         if keep_starting_points:
@@ -401,7 +416,7 @@ cdef class Path:
 
     cpdef convertConicsToQuads(self, float tolerance=0.25):
         # TODO is 0.25 too delicate? - blindly copies from Skias own use
-        if not self._has(kConic_Verb):
+        if not self._has(SkPathVerb.kConic):
             return
 
         cdef max_pow2 = 5
@@ -415,8 +430,8 @@ cdef class Path:
             raise MemoryError()
         cdef SkPoint *quad = quad_pts
 
-        cdef SkPath temp
-        cdef SkPathFillType fillType = self.path.getFillType()
+        cdef SkPathBuilder temp
+        cdef SkPathFillType fillType = self.path.fillType()
         temp.setFillType(fillType)
 
         cdef SkPoint p0
@@ -428,24 +443,24 @@ cdef class Path:
         try:
             prev = (0., 0.)
             for verb, pts in self:
-                if verb != kConic_Verb:
-                    if verb != kClose_Verb:
+                if verb != SkPathVerb.kConic:
+                    if verb != SkPathVerb.kClose:
                         prev_verb = verb
                         prev = pts[-1]
 
                     # TODO cython got angry when I tried to make this a fn
-                    if verb == kMove_Verb:
+                    if verb == SkPathVerb.kMove:
                         temp.moveTo(pts[0][0], pts[0][1])
-                    elif verb == kLine_Verb:
+                    elif verb == SkPathVerb.kLine:
                         temp.lineTo(pts[0][0], pts[0][1])
-                    elif verb == kQuad_Verb:
+                    elif verb == SkPathVerb.kQuad:
                         temp.quadTo(pts[0][0], pts[0][1],
                                     pts[1][0], pts[1][1])
-                    elif verb == kCubic_Verb:
+                    elif verb == SkPathVerb.kCubic:
                         temp.cubicTo(pts[0][0], pts[0][1],
                                      pts[1][0], pts[1][1],
                                      pts[2][0], pts[2][1])
-                    elif verb == kClose_Verb:
+                    elif verb == SkPathVerb.kClose:
                         temp.close()
                     else:
                         raise UnsupportedVerbError(verb)
@@ -507,37 +522,17 @@ cdef class Path:
                 SkDashPathEffect.Make(intervals.data, intervals.count, dash_offset)
             )
 
-        FillPathWithPaint(self.path, paint, &self.path)
+        FillPathWithPaint(self.path.detach(), paint, &self.path)
 
     cdef list getVerbs(self):
-        cdef int i, count
-        cdef uint8_t *verbs
-        count = self.path.countVerbs()
-        verbs = <uint8_t *> PyMem_Malloc(count)
-        if not verbs:
-            raise MemoryError()
-        try:
-            self.path.getVerbs(verbs, count)
-            return [PathVerb(verbs[i]) for i in range(count)]
-        finally:
-            PyMem_Free(verbs)
+        return [PathVerb(verb) for verb in self.path.verbs()]
 
     @property
     def verbs(self):
         return self.getVerbs()
 
     cdef list getPoints(self):
-        cdef int i, count
-        cdef SkPoint *pts
-        count = self.path.countPoints()
-        pts = <SkPoint *> PyMem_Malloc(count * sizeof(SkPoint))
-        if not pts:
-            raise MemoryError()
-        try:
-            self.path.getPoints(pts, count)
-            return [(pts[i].x(), pts[i].y()) for i in range(count)]
-        finally:
-            PyMem_Free(pts)
+        return [(pt.x(), pt.y()) for pt in self.path.points()]
 
     @property
     def points(self):
@@ -546,21 +541,11 @@ cdef class Path:
     cdef int countContours(self) except -1:
         if self.path.isEmpty():
             return 0
-        cdef int i, n, count
-        cdef uint8_t *verbs
-        count = self.path.countVerbs()
-        verbs = <uint8_t *> PyMem_Malloc(count)
-        if not verbs:
-            raise MemoryError()
-        try:
-            self.path.getVerbs(verbs, count)
-            n = 0
-            for i in range(count):
-                if verbs[i] == kMove_Verb:
-                    n += 1
-            return n
-        finally:
-            PyMem_Free(verbs)
+        cdef int n = 0
+        for verb in self.path.verbs():
+            if verb == SkPathVerb.kMove:
+                n += 1
+        return n
 
     @property
     def firstPoints(self):
@@ -575,7 +560,7 @@ cdef class Path:
         return result
 
     cdef int getFirstPoints(self, SkPoint **pp, int *count) except -1:
-        cdef int c = self.path.countVerbs()
+        cdef int c = self.path.verbs().size()
         if c == 0:
             return 0  # empty
 
@@ -583,18 +568,19 @@ cdef class Path:
         if not points:
             raise MemoryError()
 
-        cdef SkPath.RawIter iterator = SkPath.RawIter(self.path)
-        cdef SkPath.Verb verb
-        cdef SkPoint p[4]
+        cdef optional[SkPathIter] iterator = self.path.iter()
+        cdef SkPathVerb verb
+        cdef optional[SkPathIter.Rec] rec
 
         cdef int i = 0
         while True:
-            verb = iterator.next(p)
-            if verb == kMove_Verb:
-                points[i] = p[0]
-                i += 1
-            elif verb == kDone_Verb:
+            rec = iterator.value().next()
+            if not rec.has_value():
                 break
+            verb = rec.value().fVerb
+            if verb == SkPathVerb.kMove:
+                points[i] = rec.value().fPoints[0]
+                i += 1
 
         points = <SkPoint *> PyMem_Realloc(points, i * sizeof(SkPoint))
         count[0] = i
@@ -604,43 +590,45 @@ cdef class Path:
 
     @property
     def contours(self):
-        cdef SkPath temp
-        cdef SkPathFillType fillType = self.path.getFillType()
+        cdef SkPathBuilder temp
+        cdef SkPathFillType fillType = self.path.fillType()
 
         temp.setFillType(fillType)
 
-        cdef SkPath.Verb verb
-        cdef SkPoint p[4]
-        cdef SkPath.RawIter iterator = SkPath.RawIter(self.path)
+        cdef SkPathVerb verb
+        cdef SkSpan[const SkPoint] p
+        cdef optional[SkPathIter] iterator = self.path.iter()
+        cdef optional[SkPathIter.Rec] rec
 
         while True:
-            verb = iterator.next(p)
-            if verb == kMove_Verb:
-                if not temp.isEmpty():
-                    yield Path.create(temp)
-                    temp.rewind()
-                    temp.setFillType(fillType)
-                temp.moveTo(p[0])
-            elif verb == kLine_Verb:
-                temp.lineTo(p[1])
-            elif verb == kQuad_Verb:
-                temp.quadTo(p[1], p[2])
-            elif verb == kConic_Verb:
-                temp.conicTo(p[1], p[2], iterator.conicWeight())
-            elif verb == kCubic_Verb:
-                temp.cubicTo(p[1], p[2], p[3])
-            elif verb == kClose_Verb:
-                temp.close()
-                yield Path.create(temp)
-                temp.rewind()
-                temp.setFillType(fillType)
-            elif verb == kDone_Verb:
+            rec = iterator.value().next()
+            if not rec.has_value():
+                break
+            verb = rec.value().fVerb
+            p = rec.value().fPoints
+            if verb == SkPathVerb.kMove:
                 if not temp.isEmpty():
                     yield Path.create(temp)
                     temp.reset()
-                break
+                    temp.setFillType(fillType)
+                temp.moveTo(p[0])
+            elif verb == SkPathVerb.kLine:
+                temp.lineTo(p[1])
+            elif verb == SkPathVerb.kQuad:
+                temp.quadTo(p[1], p[2])
+            elif verb == SkPathVerb.kConic:
+                temp.conicTo(p[1], p[2], rec.value().conicWeight())
+            elif verb == SkPathVerb.kCubic:
+                temp.cubicTo(p[1], p[2], p[3])
+            elif verb == SkPathVerb.kClose:
+                temp.close()
+                yield Path.create(temp)
+                temp.reset()
+                temp.setFillType(fillType)
             else:
                 raise AssertionError(verb)
+        if not temp.isEmpty():
+            yield Path.create(temp)
 
     @property
     def segments(self):
@@ -729,8 +717,8 @@ cdef class Path:
             perspectiveY,
             perspectiveBias,
         )
-        cdef Path result = Path.__new__(Path)
-        self.path.transform(matrix, &result.path)
+        cdef Path result = Path.create(self.path)
+        result.path.transform(matrix)
         return result
 
 
@@ -747,20 +735,20 @@ cdef uint8_t *POINTS_IN_VERB = [
 ]
 
 cdef dict VERB_METHODS = {
-    kMove_Verb: "moveTo",
-    kLine_Verb: "lineTo",
-    kQuad_Verb: "quadTo",
-    kConic_Verb: "conicTo",
-    kCubic_Verb: "cubicTo",
-    kClose_Verb: "close",
+    SkPathVerb.kMove: "moveTo",
+    SkPathVerb.kLine: "lineTo",
+    SkPathVerb.kQuad: "quadTo",
+    SkPathVerb.kConic: "conicTo",
+    SkPathVerb.kCubic: "cubicTo",
+    SkPathVerb.kClose: "close",
 }
 
 cdef dict PEN_METHODS = {
-    kMove_Verb: "moveTo",
-    kLine_Verb: "lineTo",
-    kQuad_Verb: "qCurveTo",
-    kCubic_Verb: "curveTo",
-    kClose_Verb: "closePath",
+    SkPathVerb.kMove: "moveTo",
+    SkPathVerb.kLine: "lineTo",
+    SkPathVerb.kQuad: "qCurveTo",
+    SkPathVerb.kCubic: "curveTo",
+    SkPathVerb.kClose: "closePath",
 }
 
 
@@ -771,37 +759,39 @@ cdef class RawPathIterator:
 
     def __cinit__(self, Path path):
         self.path = path
-        self.iterator = SkPath.RawIter(self.path.path)
+        self.iterator = self.path.path.iter()
 
     def __iter__(self):
         return self
 
     def __next__(self):
         cdef tuple pts
-        cdef SkPath.Verb verb
-        cdef SkPoint p[4]
+        cdef SkPathVerb verb
+        cdef SkSpan[const SkPoint] p
 
-        verb = self.iterator.next(p)
+        rec = self.iterator.value().next()
+        if not rec.has_value():
+            raise StopIteration()
+        verb = rec.value().fVerb
+        p = rec.value().fPoints
 
-        if verb == kMove_Verb:
+        if verb == SkPathVerb.kMove:
             pts = ((p[0].x(), p[0].y()),)
-        elif verb == kLine_Verb:
+        elif verb == SkPathVerb.kLine:
             pts = ((p[1].x(), p[1].y()),)
-        elif verb == kQuad_Verb:
+        elif verb == SkPathVerb.kQuad:
             pts = ((p[1].x(), p[1].y()),
                    (p[2].x(), p[2].y()))
-        elif verb == kConic_Verb:
+        elif verb == SkPathVerb.kConic:
             pts = ((p[1].x(), p[1].y()),
                    (p[2].x(), p[2].y()),
-                   self.iterator.conicWeight())
-        elif verb == kCubic_Verb:
+                   rec.value().conicWeight())
+        elif verb == SkPathVerb.kCubic:
             pts = ((p[1].x(), p[1].y()),
                    (p[2].x(), p[2].y()),
                    (p[3].x(), p[3].y()))
-        elif verb == kClose_Verb:
+        elif verb == SkPathVerb.kClose:
             pts = NO_POINTS
-        elif verb == kDone_Verb:
-            raise StopIteration()
         else:
             raise UnsupportedVerbError(verb)
 
@@ -815,11 +805,10 @@ cdef tuple CLOSE_PATH = ("closePath", NO_POINTS)
 cdef class SegmentPenIterator:
 
     def __cinit__(self, Path path):
-        self.pa = _SkPointArray.create(path.path)
-        self.pts = self.pa.data
-        self.va = _VerbArray.create(path.path)
-        self.verbs = self.va.data - 1
-        self.verb_stop = self.va.data + self.va.count
+        self.path = Path.create(path.path)
+        self.pts = self.path.path.points().begin()
+        self.verbs = self.path.path.verbs().begin() - 1  # TODO: UB
+        self.verb_stop = self.path.path.verbs().end()
         self.move_pt = SkPoint.Make(.0, .0)
         self.closed = True
 
@@ -828,7 +817,7 @@ cdef class SegmentPenIterator:
 
     def __next__(self):
         cdef tuple points
-        cdef uint8_t verb
+        cdef SkPathVerb verb
 
         self.verbs += 1
         if self.verbs >= self.verb_stop:
@@ -840,7 +829,7 @@ cdef class SegmentPenIterator:
         else:
             verb = self.verbs[0]
 
-        if verb == kMove_Verb:
+        if verb == SkPathVerb.kMove:
             # skia contours are implicitly open, unless they end with "close"
             if not self.closed:
                 self.closed = True
@@ -850,12 +839,12 @@ cdef class SegmentPenIterator:
             self.closed = False
             points = ((self.pts[0].x(), self.pts[0].y()),)
             self.pts += 1
-        elif verb == kClose_Verb:
+        elif verb == SkPathVerb.kClose:
             self.closed = True
             return CLOSE_PATH
-        elif verb == kLine_Verb:
+        elif verb == SkPathVerb.kLine:
             if (
-                self.peek() == kClose_Verb
+                self.nextIsClose()
                 and points_almost_equal(self.pts[0], self.move_pt)
             ):
                 # skip closing lineTo if contour's last point ~= first
@@ -863,11 +852,11 @@ cdef class SegmentPenIterator:
             else:
                 points = ((self.pts[0].x(), self.pts[0].y()),)
             self.pts += 1
-        elif verb == kQuad_Verb:
+        elif verb == SkPathVerb.kQuad:
             points = self._join_quadratic_segments()
-        elif verb == kCubic_Verb:
+        elif verb == SkPathVerb.kCubic:
             if (
-                self.peek() == kClose_Verb
+                self.nextIsClose()
                 and points_almost_equal(self.pts[2], self.move_pt)
             ):
                 # skip closing lineTo if contour's last point ~= first
@@ -889,19 +878,19 @@ cdef class SegmentPenIterator:
         cdef str method = PEN_METHODS[verb]
         return (method, points)
 
-    cdef inline uint8_t peek(self):
+    cdef inline bint nextIsClose(self):
         if self.verbs + 1 < self.verb_stop:
-            return (self.verbs + 1)[0]
+            return (self.verbs + 1)[0] == SkPathVerb.kClose
         else:
-            return kDone_Verb
+            return 0
 
     cdef tuple _join_quadratic_segments(self):
         # must only be called when the current verb is kQuad_Verb
         # assert self.verbs < self.verb_stop and self.verbs[0] == kQuad_Verb
 
-        cdef uint8_t *verbs = self.verbs
-        cdef uint8_t *next_verb_ptr
-        cdef SkPoint *pts = self.pts
+        cdef const SkPathVerb *verbs = self.verbs
+        cdef const SkPathVerb *next_verb_ptr
+        cdef const SkPoint *pts = self.pts
 
         cdef list points = []
 
@@ -911,7 +900,7 @@ cdef class SegmentPenIterator:
             # check if the following segments (if any) are also quadratic
             next_verb_ptr = verbs + 1
             if next_verb_ptr != self.verb_stop:
-                if next_verb_ptr[0] == kQuad_Verb:
+                if next_verb_ptr[0] == SkPathVerb.kQuad:
                     if is_middle_point(pts[0], pts[1], pts[2]):
                         # skip TrueType "implied" on-curve point, and keep
                         # evaluating the next quadratic segment
@@ -919,7 +908,7 @@ cdef class SegmentPenIterator:
                         pts += 2
                         continue
                 elif (
-                    next_verb_ptr[0] == kClose_Verb
+                    next_verb_ptr[0] == SkPathVerb.kClose
                     and points_almost_equal(pts[1], self.move_pt)
                 ):
                     # last segment on a closed contour: make sure there is no
@@ -1021,27 +1010,37 @@ cdef class PathPen:
         self.path.addPath(component_path)
 
 
-cdef double get_path_area(const SkPath& path) except? -1234567:
+cdef double get_path_area(const SkPathBuilder& path) except? -1234567:
     # Adapted from fontTools/pens/areaPen.py
     cdef double value = .0
-    cdef SkPath.Verb verb
-    cdef SkPoint p[4]
+    cdef SkPathVerb verb
+    cdef SkSpan[const SkPoint] p
     cdef SkPoint p0, start_point
     cdef SkScalar x0, y0, x1, y1, x2, y2, x3, y3
-    # here we pass forceClose=True for simplicity. Make it optional?
-    cdef SkPath.Iter iterator = SkPath.Iter(path, True)
+    cdef optional[SkPathIter] iterator = path.iter()
+    cdef bint need_close = False
+    cdef optional[SkPathIter.Rec] rec
 
     p0 = start_point = SkPoint.Make(.0, .0)
     while True:
-        verb = iterator.next(p)
-        if verb == kMove_Verb:
+        rec = iterator.value().next()
+        if not rec.has_value():
+            break
+        verb = rec.value().fVerb
+        p = rec.value().fPoints
+        if verb == SkPathVerb.kMove:
+            if need_close:
+                x0, y0 = p0.x(), p0.y()
+                x1, y1 = start_point.x(), start_point.y()
+                value -= (x1 - x0) * (y1 + y0) * .5
             p0 = start_point = p[0]
-        elif verb == kLine_Verb:
+            need_close = True
+        elif verb == SkPathVerb.kLine:
             x0, y0 = p0.x(), p0.y()
             x1, y1 = p[1].x(), p[1].y()
             value -= (x1 - x0) * (y1 + y0) * .5
             p0 = p[1]
-        elif verb == kQuad_Verb:
+        elif verb == SkPathVerb.kQuad:
             # https://github.com/Pomax/bezierinfo/issues/44
             x0, y0 = p0.x(), p0.y()
             x1, y1 = p[1].x() - x0, p[1].y() - y0
@@ -1049,9 +1048,9 @@ cdef double get_path_area(const SkPath& path) except? -1234567:
             value -= (x2 * y1 - x1 * y2) / 3
             value -= (p[2].x() - x0) * (p[2].y() + y0) * .5
             p0 = p[2]
-        elif verb == kConic_Verb:
+        elif verb == SkPathVerb.kConic:
             raise UnsupportedVerbError("CONIC")
-        elif verb == kCubic_Verb:
+        elif verb == SkPathVerb.kCubic:
             # https://github.com/Pomax/bezierinfo/issues/44
             x0, y0 = p0.x(), p0.y()
             x1, y1 = p[1].x() - x0, p[1].y() - y0
@@ -1064,49 +1063,21 @@ cdef double get_path_area(const SkPath& path) except? -1234567:
                      ) * 0.15
             value -= (p[3].x() - x0) * (p[3].y() + y0) * .5
             p0 = p[3]
-        elif verb == kClose_Verb:
+        elif verb == SkPathVerb.kClose:
             x0, y0 = p0.x(), p0.y()
             x1, y1 = start_point.x(), start_point.y()
             value -= (x1 - x0) * (y1 + y0) * .5
             p0 = start_point = SkPoint.Make(.0, .0)
-        elif verb == kDone_Verb:
-            break
+            need_close = False
         else:
             raise AssertionError(verb)
 
+    if need_close:
+        x0, y0 = p0.x(), p0.y()
+        x1, y1 = start_point.x(), start_point.y()
+        value -= (x1 - x0) * (y1 + y0) * .5
+
     return value
-
-
-cdef class _VerbArray:
-
-    @staticmethod
-    cdef _VerbArray create(const SkPath& path):
-        cdef _VerbArray self = _VerbArray.__new__(_VerbArray)
-        self.count = path.countVerbs()
-        self.data = <uint8_t *> PyMem_Malloc(self.count)
-        if not self.data:
-            raise MemoryError()
-        path.getVerbs(self.data, self.count)
-        return self
-
-    def __dealloc__(self):
-        PyMem_Free(self.data)  # no-op if data is NULL
-
-
-cdef class _SkPointArray:
-
-    @staticmethod
-    cdef _SkPointArray create(const SkPath& path):
-        cdef _SkPointArray self = _SkPointArray.__new__(_SkPointArray)
-        self.count = path.countPoints()
-        self.data = <SkPoint *> PyMem_Malloc(self.count * sizeof(SkPoint))
-        if not self.data:
-            raise MemoryError()
-        path.getPoints(self.data, self.count)
-        return self
-
-    def __dealloc__(self):
-        PyMem_Free(self.data)  # no-op if data is NULL
 
 
 cdef class _SkScalarArray:
@@ -1127,48 +1098,50 @@ cdef class _SkScalarArray:
         PyMem_Free(self.data)  # no-op if data is NULL
 
 
-cdef inline int pts_in_verb(unsigned v) except -1:
-    if v >= NUM_VERBS:
+cdef inline int pts_in_verb(SkPathVerb v) except -1:
+    if <uint8_t>v >= NUM_VERBS:
         raise IndexError(v)
-    return POINTS_IN_VERB[v]
+    return POINTS_IN_VERB[<uint8_t>v]
 
 
-cdef bint reverse_contour(SkPath& path) except False:
-    cdef SkPath temp
+cdef bint reverse_contour(SkPathBuilder& path) except False:
+    cdef SkPathBuilder temp
     cdef SkPoint lastPt
+    cdef optional[SkPoint] maybeLastPt = path.getLastPt()
 
-    if not path.getLastPt(&lastPt):
+    if not maybeLastPt.has_value():
         return True  # ignore empty path
+    lastPt = maybeLastPt.value()
 
-    cdef _VerbArray va = _VerbArray.create(path)
-    cdef uint8_t *verbsStart = va.data  # pointer to the first verb
-    cdef uint8_t *verbs = verbsStart + va.count - 1  # pointer to the last verb
+    cdef SkSpan[const SkPathVerb] va = path.verbs()
+    cdef const SkPathVerb *verbsStart = va.begin()  # pointer to the first verb
+    cdef const SkPathVerb *verbs = va.end() - 1  # pointer to the last verb
 
-    cdef _SkPointArray pa = _SkPointArray.create(path)
-    cdef SkPoint *pts = pa.data + pa.count - 1  # pointer to the last point
+    cdef SkSpan[const SkPoint] pa = path.points()
+    cdef const SkPoint *pts = pa.end() - 1  # pointer to the last point
 
     # the last point becomes the first
     temp.moveTo(lastPt)
 
-    cdef uint8_t v
+    cdef SkPathVerb v
     cdef bint closed = False
     # loop over both arrays in reverse, break before the first verb
     while verbs > verbsStart:
         v = verbs[0]
         verbs -= 1
         pts -= pts_in_verb(v)
-        if v == kMove_Verb:
+        if v == SkPathVerb.kMove:
             # if the path has multiple contours, stop after reversing the last
             break
-        elif v == kLine_Verb:
+        elif v == SkPathVerb.kLine:
             temp.lineTo(pts[0])
-        elif v == kQuad_Verb:
+        elif v == SkPathVerb.kQuad:
             temp.quadTo(pts[1], pts[0])
-        elif v == kConic_Verb:
+        elif v == SkPathVerb.kConic:
             raise UnsupportedVerbError("CONIC")
-        elif v == kCubic_Verb:
+        elif v == SkPathVerb.kCubic:
             temp.cubicTo(pts[2], pts[1], pts[0])
-        elif v == kClose_Verb:
+        elif v == SkPathVerb.kClose:
             closed = True
         else:
             raise AssertionError(v)
@@ -1176,7 +1149,7 @@ cdef bint reverse_contour(SkPath& path) except False:
     if closed:
         temp.close()
 
-    temp.setFillType(path.getFillType())
+    temp.setFillType(path.fillType())
     # assignment to references is allowed in C++ but Cython doesn't support it
     # https://github.com/cython/cython/issues/1863
     # path = temp
@@ -1187,38 +1160,40 @@ cdef bint reverse_contour(SkPath& path) except False:
 # NOTE This is meant to be used only on simplified paths (i.e. without
 # overlapping contours), like the ones returned from Skia's path operations.
 # It only tests the bounding boxes and the on-curve points.
-cdef int path_is_inside(const SkPath& self, const SkPath& other) except -1:
-    cdef SkRect r1, r2
-    cdef SkPath.RawIter iterator
-    cdef SkPath.Verb verb
-    cdef SkPoint[4] p
+cdef int path_is_inside(const SkPathBuilder& self, const SkPathBuilder& other) except -1:
+    cdef optional[SkRect] r1, r2
+    cdef SkPathVerb verb
+    cdef SkSpan[const SkPoint] p
     cdef SkPoint oncurve
 
     r1 = self.computeTightBounds()
     r2 = other.computeTightBounds()
-    if not SkRect.Intersects(r1, r2):
+    if not r1.has_value() or not r2.has_value() or not SkRect.Intersects(r1.value(), r2.value()):
         return 0
 
-    iterator = SkPath.RawIter(other)
+    cdef optional[SkPathIter] iterator = other.iter()
+    cdef optional[SkPathIter.Rec] rec
     while True:
-        verb = iterator.next(p)
-        if verb == kMove_Verb:
-            oncurve = p[0]
-        elif verb == kLine_Verb:
-            oncurve = p[1]
-        elif verb == kQuad_Verb:
-            oncurve = p[2]
-        elif verb == kConic_Verb:
-            raise UnsupportedVerbError("CONIC")
-        elif verb == kCubic_Verb:
-            oncurve = p[3]
-        elif verb == kClose_Verb:
-            continue
-        elif verb == kDone_Verb:
+        rec = iterator.value().next()
+        if not rec.has_value():
             break
+        verb = rec.value().fVerb
+        p = rec.value().fPoints
+        if verb == SkPathVerb.kMove:
+            oncurve = p[0]
+        elif verb == SkPathVerb.kLine:
+            oncurve = p[1]
+        elif verb == SkPathVerb.kQuad:
+            oncurve = p[2]
+        elif verb == SkPathVerb.kConic:
+            raise UnsupportedVerbError("CONIC")
+        elif verb == SkPathVerb.kCubic:
+            oncurve = p[3]
+        elif verb == SkPathVerb.kClose:
+            continue
         else:
             raise AssertionError(verb)
-        if not self.contains(oncurve.x(), oncurve.y()):
+        if not self.contains(oncurve):
             return 0
 
     return 1
@@ -1251,10 +1226,10 @@ cpdef int restore_starting_points(Path path, list points) except -1:
     if not modified:
         return 0
 
-    path.path.rewind()
+    path.path.reset()
     for i in range(n):
         this = contours[i]
-        path.path.addPath(this.path)
+        path.path.addPath(this.path.detach())
 
     return 1
 
@@ -1338,10 +1313,10 @@ cpdef bint winding_from_even_odd(Path path, bint clockwise=False) except False:
     finally:
         PyMem_Free(nested)
 
-    path.path.rewind()
+    path.path.reset()
     for i in range(n):
         contour = contours[i]
-        path.path.addPath(contour.path)
+        path.path.addPath(contour.path.detach())
 
     path.path.setFillType(SkPathFillType.kWinding)
     return True
@@ -1373,13 +1348,13 @@ cdef int find_oncurve_point(
     SkScalar y,
     const SkPoint *pts,
     int pt_count,
-    const uint8_t *verbs,
+    const SkPathVerb *verbs,
     int verb_count,
     int *pt_index,
     int *verb_index,
 ) except -1:
     cdef SkPoint oncurve
-    cdef uint8_t v
+    cdef SkPathVerb v
     cdef int i, j, n
     cdef int seen = 0
 
@@ -1400,29 +1375,29 @@ cdef int find_oncurve_point(
     return 0
 
 
-cdef int contour_is_closed(const uint8_t *verbs, int verb_count) except -1:
-    cdef int i
-    cdef uint8_t v
+cdef int contour_is_closed(SkSpan[const SkPathVerb] verbs) except -1:
+    cdef SkPathVerb v
     cdef bint closed = False
-    for i in range(1, verb_count):
-        v = verbs[i]
-        if v == kMove_Verb:
+    if verbs.empty():
+        return closed
+    for verb in verbs.subspan(1):
+        if verb == SkPathVerb.kMove:
             raise ValueError("expected single contour")
-        elif v == kClose_Verb:
+        elif verb == SkPathVerb.kClose:
             closed = True
     return closed
 
 
-cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1:
-    cdef _VerbArray va = _VerbArray.create(path)
-    cdef uint8_t *verbs = va.data
-    cdef int verb_count = va.count
+cdef int set_contour_start_point(SkPathBuilder& path, SkScalar x, SkScalar y) except -1:
+    cdef SkSpan[const SkPathVerb] va = path.verbs()
+    cdef const SkPathVerb *verbs = va.data()
+    cdef size_t verb_count = va.size()
 
-    cdef _SkPointArray pa = _SkPointArray.create(path)
-    cdef SkPoint *pts = pa.data
-    cdef int pt_count = pa.count
+    cdef SkSpan[const SkPoint] pa = path.points()
+    cdef const SkPoint *pts = pa.data()
+    cdef size_t pt_count = pa.size()
 
-    cdef bint closed = contour_is_closed(verbs, verb_count)
+    cdef bint closed = contour_is_closed(va)
 
     cdef int pt_index = -1
     cdef int verb_index = -1
@@ -1444,11 +1419,10 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
         reverse_contour(path)
         return 1
 
-    cdef SkPathFillType fill = path.getFillType()
-    path.rewind()
-    path.setFillType(fill)
+    cdef SkPathBuilder temp
+    temp.setFillType(path.fillType())
 
-    cdef uint8_t first_verb
+    cdef SkPathVerb first_verb
     cdef SkPoint first_pt
     cdef int vi, pi
 
@@ -1458,16 +1432,16 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
     first_pt = pts[pt_index]
     pi = (pt_index + 1) % pt_count
 
-    path.moveTo(first_pt)
+    temp.moveTo(first_pt)
 
     cdef int i, n
-    cdef uint8_t v = kDone_Verb
-    cdef SkPoint *last = &first_pt
+    cdef SkPathVerb v
+    cdef const SkPoint *last = &first_pt
     for i in range(1, verb_count):
         v = verbs[vi]
         n = pts_in_verb(v)
         assert pi + n <= pt_count
-        if v == kMove_Verb:
+        if v == SkPathVerb.kMove:
             # the moveTo from the original contour is converted to a lineTo,
             # unless it's equal to the previous point, or collinear between
             # the last oncuve point and the next line segment
@@ -1475,46 +1449,47 @@ cdef int set_contour_start_point(SkPath& path, SkScalar x, SkScalar y) except -1
             if (
                 points_almost_equal(last[0], pts[pi])
                 or (
-                    verbs[(vi + 1) % verb_count] == kLine_Verb
+                    verbs[(vi + 1) % verb_count] == SkPathVerb.kLine
                     and collinear(last[0], pts[pi], pts[(pi + 1) % pt_count])
                 )
             ):
                 pass
             else:
-                path.lineTo(pts[pi])
+                temp.lineTo(pts[pi])
                 last = pts + pi
-        elif v == kLine_Verb:
+        elif v == SkPathVerb.kLine:
             # skip adding lineTo if it's the last segment from the original
             # contour and overlaps with the old moveTo point
             if (
-                verbs[(vi + 1) % verb_count] == kClose_Verb
+                verbs[(vi + 1) % verb_count] == SkPathVerb.kClose
                 and points_almost_equal(pts[pi], pts[(pi + 1) % pt_count])
             ):
                 pass
             else:
-                path.lineTo(pts[pi])
+                temp.lineTo(pts[pi])
                 last = pts + pi
-        elif v == kQuad_Verb:
-            path.quadTo(pts[pi], pts[pi + 1])
+        elif v == SkPathVerb.kQuad:
+            temp.quadTo(pts[pi], pts[pi + 1])
             last = pts + pi + 1
-        elif v == kConic_Verb:
+        elif v == SkPathVerb.kConic:
             raise UnsupportedVerbError("CONIC")
-        elif v == kCubic_Verb:
-            path.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
+        elif v == SkPathVerb.kCubic:
+            temp.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
             last = pts + pi + 2
-        elif v == kClose_Verb:
+        elif v == SkPathVerb.kClose:
             pass
         else:
             raise AssertionError(v)
         vi = (vi + 1) % verb_count
         pi = (pi + n) % pt_count
 
-    if first_verb == kQuad_Verb:
-        path.quadTo(pts[pi], pts[pi + 1])
-    elif first_verb == kCubic_Verb:
-        path.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
+    if first_verb == SkPathVerb.kQuad:
+        temp.quadTo(pts[pi], pts[pi + 1])
+    elif first_verb == SkPathVerb.kCubic:
+        temp.cubicTo(pts[pi], pts[pi + 1], pts[pi + 2])
 
-    path.close()
+    temp.close()
+    (&path)[0] = temp
     return 1
 
 
@@ -1560,9 +1535,11 @@ cpdef Path op(
     cdef list first_points
     if keep_starting_points:
         first_points = one.firstPoints + two.firstPoints
-    cdef Path result = Path()
-    if not Op(one.path, two.path, operator, &result.path):
+    cdef optional[SkPath] skresult = Op(one.path.snapshot(), two.path.snapshot(), operator)
+    if not skresult.has_value():
         raise PathOpsError("operation did not succeed")
+    cdef Path result = Path()
+    result.path = skresult.value()
     if fix_winding:
         winding_from_even_odd(result, clockwise)
     if keep_starting_points:
@@ -1579,9 +1556,11 @@ cpdef Path simplify(
     cdef list first_points
     if keep_starting_points:
         first_points = path.firstPoints
-    cdef Path result = Path()
-    if not Simplify(path.path, &result.path):
+    cdef optional[SkPath] skresult = Simplify(path.path.snapshot())
+    if not skresult.has_value():
         raise PathOpsError("operation did not succeed")
+    cdef Path result = Path()
+    result.path = skresult.value()
     if fix_winding:
         winding_from_even_odd(result, clockwise)
     if keep_starting_points:
@@ -1603,14 +1582,16 @@ cdef class OpBuilder:
         self.clockwise = clockwise
 
     cpdef add(self, Path path, SkPathOp operator):
-        self.builder.add(path.path, operator)
+        self.builder.add(path.path.snapshot(), operator)
         if self.keep_starting_points:
             self.first_points.extend(path.firstPoints)
 
     cpdef Path resolve(self):
-        cdef Path result = Path()
-        if not self.builder.resolve(&result.path):
+        cdef optional[SkPath] skresult = self.builder.resolve()
+        if not skresult.has_value():
             raise PathOpsError("operation did not succeed")
+        cdef Path result = Path()
+        result.path = skresult.value()
         if self.fix_winding:
             winding_from_even_odd(result, self.clockwise)
         if self.keep_starting_points:

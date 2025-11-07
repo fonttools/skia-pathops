@@ -8,8 +8,10 @@ on:
     branches: [main]
 
 env:
-  # skip 3.7 on all platforms; only build pypy3 for linux
-  CIBW_SKIP: cp37-* pp*-macosx_x86_64 pp*-win_amd64
+  # skip 3.8, 3.9 (EOL); skip free-threaded 3.14 (untested yet)
+  CIBW_SKIP: cp38-* cp39-* cp314t-*
+  # enable PyPy builds on all platforms
+  CIBW_ENABLE: pypy
   CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
   CIBW_MANYLINUX_I686_IMAGE: manylinux2014
   CIBW_MANYLINUX_PYPY_X86_64_IMAGE: manylinux2014
@@ -24,19 +26,28 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CIBW_ARCHS: ${{ matrix.arch }}
+      CIBW_BUILD: ${{ matrix.cibw_build_filter || '' }}
     defaults:
       run:
         shell: bash
     strategy:
       fail-fast: false
       matrix:
-        # macos-13 runners are still x86_64, macos-14 (latest) are arm64; we want to build
-        # the x86_64 wheel on/for x86_64 macs
-        os: [macos-13, ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
         arch: [auto64]
         include:
+          # CPython universal2 wheels (x86_64 + arm64) for macOS
           - os: macos-latest
             arch: universal2
+            cibw_build_filter: "cp*"
+          # PyPy x86_64 wheels for macOS (PyPy doesn't support universal2)
+          - os: macos-13
+            arch: x86_64
+            cibw_build_filter: "pp*"
+          # PyPy arm64 wheels for macOS (PyPy doesn't support universal2)
+          - os: macos-latest
+            arch: arm64
+            cibw_build_filter: "pp*"
           - os: windows-latest
             arch: x86
     steps:
@@ -54,7 +65,11 @@ jobs:
         if [ "$BUILD_SKIA_FROM_SOURCE" == "0" ]; then
           pip install setuptools githubrelease
           if ! [[ $CIBW_ARCHS =~ ^auto ]]; then
-            cpu_arch="--cpu-arch=$CIBW_ARCHS"
+            # translate cibuildwheel arch names to download_libskia.py names
+            case "$CIBW_ARCHS" in
+              x86_64) cpu_arch="--cpu-arch=x64" ;;
+              *) cpu_arch="--cpu-arch=$CIBW_ARCHS" ;;
+            esac
           fi
           python ci/download_libskia.py -d "${SKIA_LIBRARY_DIR}" $cpu_arch
         fi
@@ -72,7 +87,7 @@ jobs:
     strategy:
       matrix:
         # aarch64 uses qemu so it's slow, build each py version in parallel jobs
-        python: [38, 39, 310, 311, 312, 313]
+        python: [310, 311, 312, 313, 314]
         arch: [aarch64]
     env:
       # Skip building aarch64 wheels for musllinux until I figure out why I get

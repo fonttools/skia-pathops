@@ -329,7 +329,7 @@ extra_compile_args = {
         [
             # extra flags needed on macOS for C++11
             "-stdlib=libc++",
-            "-mmacosx-version-min=10.9",
+            "-mmacosx-version-min=11.0",
         ]
         if platform.system() == "Darwin"
         else []
@@ -352,6 +352,7 @@ extensions = [
         ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
+        define_macros=[("SK_SUPPORT_UNSPANNED_APIS", "1")],
         libraries=["skia", *pkg_config_op.libraries],
         library_dirs=library_dirs,
         language="c++",
@@ -391,7 +392,7 @@ setup_params = dict(
             # "pytest-cython",
         ],
     },
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
