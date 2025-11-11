@@ -36,9 +36,15 @@ from ._skia.pathops cimport (
 )
 from libc.stdint cimport uint8_t, int32_t, uint32_t
 from libc.math cimport fabs, sqrt, isfinite
-from cpython.mem cimport PyMem_Malloc, PyMem_Free, PyMem_Realloc
+from libc.stddef cimport size_t
 from libc.string cimport memset
 cimport cython
+
+# Explicit declarations for Limited API / Stable ABI compatibility
+cdef extern from "Python.h":
+    void* PyMem_Malloc(size_t)
+    void* PyMem_Realloc(void*, size_t)
+    void  PyMem_Free(void*)
 import itertools
 import sys
 
@@ -59,19 +65,20 @@ else:
     from itertools import pairwise
 
 
-cdef class PathOpsError(Exception):
+# Standard Python exception classes (not cdef classes) for Limited API compatibility
+class PathOpsError(Exception):
     pass
 
 
-cdef class UnsupportedVerbError(PathOpsError):
+class UnsupportedVerbError(PathOpsError):
     pass
 
 
-cdef class OpenPathError(PathOpsError):
+class OpenPathError(PathOpsError):
     pass
 
 
-cdef class NumberOfPointsError(PathOpsError):
+class NumberOfPointsError(PathOpsError):
     pass
 
 
