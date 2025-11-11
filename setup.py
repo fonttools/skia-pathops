@@ -41,7 +41,7 @@ use_py_limited_api = bool_from_environ("USE_PY_LIMITED_API", default=True)
 limited_api_min_version = "0x030A0000"  # Python 3.10
 
 # check if minimum required Cython is available
-cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
+cython_version_re = re.compile(r'\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
 with open("pyproject.toml", "r", encoding="utf-8") as fp:
     for line in fp:
         m = cython_version_re.match(line)
@@ -108,6 +108,7 @@ class custom_build_ext(build_ext):
             # optionally enable line tracing for test coverage support
             linetrace = os.environ.get("CYTHON_TRACE") == "1"
             force = linetrace or self.force
+
             self.distribution.ext_modules[:] = cythonize(
                 self.distribution.ext_modules,
                 force=force,
