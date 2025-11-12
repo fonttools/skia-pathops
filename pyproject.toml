@@ -14,9 +14,3 @@ requires = [
 select = "cp*-{*linux_*,*macosx_*}"
 inherit.repair-wheel-command = "append"
 repair-wheel-command = "pipx run abi3audit --strict --report {wheel}"
-
-# Disable Limited API for PyPy as it doesn't support it
-# https://cibuildwheel.pypa.io/en/stable/configuration/#overrides
-[[tool.cibuildwheel.overrides]]
-select = "pp*"
-environment = { USE_PY_LIMITED_API = "0" }

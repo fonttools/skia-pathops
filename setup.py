@@ -34,9 +34,13 @@ BUILD_SKIA_FROM_SOURCE = bool(int(os.environ.get("BUILD_SKIA_FROM_SOURCE", "1"))
 SKIA_LIBRARY_DIR = os.environ.get("SKIA_LIBRARY_DIR")
 
 # Python Limited API for stable ABI support is enabled by default.
-# Set USE_PY_LIMITED_API=0 to turn it off.
+# PyPy does not support Limited API, so we disable it automatically.
+# Can also be disabled manually with USE_PY_LIMITED_API=0.
 # https://docs.python.org/3/c-api/stable.html#limited-c-api
-use_py_limited_api = bool_from_environ("USE_PY_LIMITED_API", default=True)
+is_pypy = sys.implementation.name == "pypy"
+use_py_limited_api = (
+    False if is_pypy else bool_from_environ("USE_PY_LIMITED_API", default=True)
+)
 # NOTE: this must be kept in sync with python_requires='>=3.10' below
 limited_api_min_version = "0x030A0000"  # Python 3.10
 
