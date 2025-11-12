@@ -84,18 +84,14 @@ jobs:
 
   build_aarch64_wheels:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # aarch64 uses qemu so it's slow, build each py version in parallel jobs
-        python: [310, 311, 312, 313, 314]
-        arch: [aarch64]
     env:
+      # aarch64 uses qemu so it's slow. With abi3 wheels, cibuildwheel will build
+      # the cp310-abi3 wheel once and reuse it for testing on all Python versions.
       # Skip building aarch64 wheels for musllinux until I figure out why I get
       # ImportError: Error relocating ...: __aarch64_cas8_acq_rel: symbol not found
       # https://github.com/fonttools/skia-pathops/actions/runs/5143956953/jobs/9259626577#step:6:624
-      CIBW_SKIP: "*-musllinux*"
-      CIBW_BUILD: cp${{ matrix.python }}-*
-      CIBW_ARCHS: ${{ matrix.arch }}
+      CIBW_SKIP: "cp38-* cp39-* cp314t-* *-musllinux*"
+      CIBW_ARCHS: aarch64
     steps:
     - uses: actions/checkout@v4
       with:
@@ -117,7 +113,7 @@ jobs:
       run: python -m cibuildwheel --output-dir wheelhouse
     - uses: actions/upload-artifact@v4
       with:
-        name: skia_pathops-${{ matrix.python }}-linux-${{ matrix.arch }}
+        name: skia_pathops-linux-aarch64
         path: wheelhouse/*.whl
 
   deploy:
