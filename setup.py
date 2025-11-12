@@ -20,13 +20,32 @@ import argparse
 import shlex
 
 
+def bool_from_environ(key: str, default: bool = False):
+    """Get a boolean value from an environment variable."""
+    value = os.environ.get(key)
+    if not value:
+        return default
+    return value.lower() not in ("0", "false", "no", "off")
+
+
 # export BUILD_SKIA_FROM_SOURCE=0 to not build libskia when building extension
 BUILD_SKIA_FROM_SOURCE = bool(int(os.environ.get("BUILD_SKIA_FROM_SOURCE", "1")))
 # Use this to specify the directory where your pre-built skia is located
 SKIA_LIBRARY_DIR = os.environ.get("SKIA_LIBRARY_DIR")
 
+# Python Limited API for stable ABI support is enabled by default.
+# PyPy does not support Limited API, so we disable it automatically.
+# Can also be disabled manually with USE_PY_LIMITED_API=0.
+# https://docs.python.org/3/c-api/stable.html#limited-c-api
+is_pypy = sys.implementation.name == "pypy"
+use_py_limited_api = (
+    False if is_pypy else bool_from_environ("USE_PY_LIMITED_API", default=True)
+)
+# NOTE: this must be kept in sync with python_requires='>=3.10' below
+limited_api_min_version = "0x030A0000"  # Python 3.10
+
 # check if minimum required Cython is available
-cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
+cython_version_re = re.compile(r'\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
 with open("pyproject.toml", "r", encoding="utf-8") as fp:
     for line in fp:
         m = cython_version_re.match(line)
@@ -93,6 +112,7 @@ class custom_build_ext(build_ext):
             # optionally enable line tracing for test coverage support
             linetrace = os.environ.get("CYTHON_TRACE") == "1"
             force = linetrace or self.force
+
             self.distribution.ext_modules[:] = cythonize(
                 self.distribution.ext_modules,
                 force=force,
@@ -344,6 +364,10 @@ extra_compile_args = {
 library_dirs = [SKIA_LIBRARY_DIR] if SKIA_LIBRARY_DIR is not None else []
 library_dirs += pkg_config_op.library_dirs
 
+define_macros = [("SK_SUPPORT_UNSPANNED_APIS", "1")]
+if use_py_limited_api:
+    define_macros.append(("Py_LIMITED_API", limited_api_min_version))
+
 extensions = [
     Extension(
         "pathops._pathops",
@@ -352,10 +376,11 @@ extensions = [
         ],
         include_dirs=include_dirs,
         extra_compile_args=extra_compile_args,
-        define_macros=[("SK_SUPPORT_UNSPANNED_APIS", "1")],
+        define_macros=define_macros,
         libraries=["skia", *pkg_config_op.libraries],
         library_dirs=library_dirs,
         language="c++",
+        py_limited_api=use_py_limited_api,
     ),
 ]
 
@@ -380,6 +405,7 @@ setup_params = dict(
     cmdclass={
         "build_ext": custom_build_ext,
     },
+    options={"bdist_wheel": {"py_limited_api": "cp310"}} if use_py_limited_api else {},
     setup_requires=["setuptools_scm"] + setuptools_git_ls_files + wheel,
     install_requires=[],
     extras_require={

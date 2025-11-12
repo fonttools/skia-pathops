@@ -41,7 +41,7 @@ jobs:
             arch: universal2
             cibw_build_filter: "cp*"
           # PyPy x86_64 wheels for macOS (PyPy doesn't support universal2)
-          - os: macos-13
+          - os: macos-15-intel
             arch: x86_64
             cibw_build_filter: "pp*"
           # PyPy arm64 wheels for macOS (PyPy doesn't support universal2)
@@ -83,26 +83,14 @@ jobs:
         path: wheelhouse/*.whl
 
   build_aarch64_wheels:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # aarch64 uses qemu so it's slow, build each py version in parallel jobs
-        python: [310, 311, 312, 313, 314]
-        arch: [aarch64]
+    # native ARM64 runner, much faster than qemu
+    runs-on: ubuntu-24.04-arm
     env:
-      # Skip building aarch64 wheels for musllinux until I figure out why I get
-      # ImportError: Error relocating ...: __aarch64_cas8_acq_rel: symbol not found
-      # https://github.com/fonttools/skia-pathops/actions/runs/5143956953/jobs/9259626577#step:6:624
-      CIBW_SKIP: "*-musllinux*"
-      CIBW_BUILD: cp${{ matrix.python }}-*
-      CIBW_ARCHS: ${{ matrix.arch }}
+      CIBW_ARCHS: aarch64
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - uses: docker/setup-qemu-action@v1.2.0
-      with:
-        platforms: all
     - name: Download pre-compiled libskia
       env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -117,7 +105,7 @@ jobs:
       run: python -m cibuildwheel --output-dir wheelhouse
     - uses: actions/upload-artifact@v4
       with:
-        name: skia_pathops-${{ matrix.python }}-linux-${{ matrix.arch }}
+        name: skia_pathops-linux-aarch64
         path: wheelhouse/*.whl
 
   deploy:
