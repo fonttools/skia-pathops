@@ -11,7 +11,7 @@ requires = [
 # https://github.com/pypa/abi3audit
 # Only on Unix platforms (Linux/macOS) since Windows has no default repair command
 [[tool.cibuildwheel.overrides]]
-select = "cp*-{linux,macosx}*"
+select = "cp*-{*linux_*,*macosx_*}"
 inherit.repair-wheel-command = "append"
 repair-wheel-command = "pipx run abi3audit --strict --report {wheel}"
 
