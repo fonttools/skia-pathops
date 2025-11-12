@@ -41,7 +41,7 @@ jobs:
             arch: universal2
             cibw_build_filter: "cp*"
           # PyPy x86_64 wheels for macOS (PyPy doesn't support universal2)
-          - os: macos-13
+          - os: macos-15-intel
             arch: x86_64
             cibw_build_filter: "pp*"
           # PyPy arm64 wheels for macOS (PyPy doesn't support universal2)
