@@ -526,7 +526,7 @@ cdef class Path:
             if intervals.count % 2 != 0:
                 raise ValueError("Expected an even number of dash_array entries")
             paint.setPathEffect(
-                SkDashPathEffect.Make(intervals.data, intervals.count, dash_offset)
+                SkDashPathEffect.Make(<SkSpan[const SkScalar]>intervals.as_span(), dash_offset)
             )
 
         FillPathWithPaint(self.path.detach(), paint, &self.path)
@@ -1103,6 +1103,9 @@ cdef class _SkScalarArray:
 
     def __dealloc__(self):
         PyMem_Free(self.data)  # no-op if data is NULL
+
+    cdef SkSpan[SkScalar] as_span(self):
+        return SkSpan[SkScalar](self.data, self.count)
 
 
 cdef inline int pts_in_verb(SkPathVerb v) except -1:
