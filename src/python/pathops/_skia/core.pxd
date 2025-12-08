@@ -6,6 +6,8 @@ ctypedef float SkScalar
 
 cdef extern from "include/core/SkSpan.h":
     cdef cppclass SkSpan[T]:
+        SkSpan()
+        SkSpan(T* data, size_t size)
         SkSpan[T] subspan(size_t offset) const
         T& operator[](size_t) const
         bint empty() const
@@ -240,7 +242,7 @@ cdef extern from "include/core/SkPathEffect.h":
 cdef extern from "include/effects/SkDashPathEffect.h":
     cdef cppclass SkDashPathEffect:
         @staticmethod
-        sk_sp[SkPathEffect] Make(const SkScalar intervals[], int count, SkScalar phase)
+        sk_sp[SkPathEffect] Make(SkSpan[const SkScalar] intervals, SkScalar phase)
 
 
 cdef extern from "include/core/SkPaint.h":

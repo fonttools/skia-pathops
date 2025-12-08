@@ -266,6 +266,8 @@ cdef class _SkScalarArray:
     @staticmethod
     cdef _SkScalarArray create(object values)
 
+    cdef SkSpan[SkScalar] as_span(self)
+
 
 cdef int pts_in_verb(SkPathVerb v) except -1
 
