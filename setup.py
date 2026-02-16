@@ -8,7 +8,8 @@ from distutils.dep_util import newer_group
 from distutils.dir_util import mkpath
 from distutils.file_util import copy_file
 from distutils.util import get_platform
-import pkg_resources
+from importlib.metadata import version as get_package_version
+from packaging.version import parse as parse_version
 import struct
 import subprocess
 import sys
@@ -55,11 +56,11 @@ with open("pyproject.toml", "r", encoding="utf-8") as fp:
     else:
         sys.exit("error: could not parse cython version from pyproject.toml")
 try:
-    pkg_resources.require("cython >= %s" % cython_min_version)
-except pkg_resources.ResolutionError:
+    cython_version = parse_version(get_package_version("cython"))
+    cython_min = parse_version(cython_min_version)
+    with_cython = cython_version >= cython_min
+except Exception:
     with_cython = False
-else:
-    with_cython = True
 
 inside_sdist = os.path.exists("PKG-INFO")
 
@@ -256,13 +257,13 @@ class custom_build_ext(build_ext):
 
                 ext_path = self.get_ext_fullpath(ext.name)
                 dest_dir = os.path.dirname(ext_path)
-                mkpath(dest_dir, verbose=self.verbose, dry_run=self.dry_run)
-                copy_file(
-                    dll_fullpath,
-                    os.path.join(dest_dir, dll_filename),
-                    verbose=self.verbose,
-                    dry_run=self.dry_run,
-                )
+                if not self.dry_run:
+                    mkpath(dest_dir, verbose=self.verbose)
+                    copy_file(
+                        dll_fullpath,
+                        os.path.join(dest_dir, dll_filename),
+                        verbose=self.verbose,
+                    )
 
 
 def build_skia(build_base):
@@ -406,7 +407,7 @@ setup_params = dict(
         "build_ext": custom_build_ext,
     },
     options={"bdist_wheel": {"py_limited_api": "cp310"}} if use_py_limited_api else {},
-    setup_requires=["setuptools_scm"] + setuptools_git_ls_files + wheel,
+    setup_requires=["setuptools_scm", "packaging"] + setuptools_git_ls_files + wheel,
     install_requires=[],
     extras_require={
         "testing": [
